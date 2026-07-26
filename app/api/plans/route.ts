@@ -7,6 +7,7 @@ export async function GET() {
     select: {
       id: true,
       name: true,
+      stripePriceId: true,
       maxSamplesPerMonth: true,
       maxWorkflowTemplates: true,
       maxUsers: true,

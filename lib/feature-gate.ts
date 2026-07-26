@@ -75,3 +75,26 @@ export async function canCreateTemplate(tenantId: string): Promise<GateResult> {
 
   return { allowed: true };
 }
+
+/**
+ * Check if the tenant can invite more users.
+ */
+export async function canInviteUser(tenantId: string): Promise<GateResult> {
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    include: { plan: true },
+  });
+
+  if (!tenant) return { allowed: false, reason: "Tenant not found" };
+  if (!tenant.plan) return { allowed: false, reason: "No active plan" };
+
+  const userCount = await prisma.user.count({
+    where: { tenantId, deletedAt: null },
+  });
+
+  if (userCount >= tenant.plan.maxUsers) {
+    return { allowed: false, reason: "User limit reached for your current plan" };
+  }
+
+  return { allowed: true };
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,8 @@ import {
   Settings2,
   TestTubeDiagonal,
   Activity,
+  Search,
+  X,
 } from "lucide-react";
 
 interface Sample {
@@ -41,12 +43,6 @@ const statusMap: Record<
   completed: { label: "Completed", variant: "completed" },
 };
 
-const statusDot: Record<string, string> = {
-  in_progress: "bg-blue-500",
-  flagged: "bg-amber-500",
-  completed: "bg-green-500",
-};
-
 function relativeTime(dateStr: string) {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
@@ -61,10 +57,12 @@ function sampleId(id: string) {
   return "SMP-" + id.slice(0, 4).toUpperCase();
 }
 
-export default function DashboardPage() {
+export default function SamplesPage() {
   const router = useRouter();
   const [samples, setSamples] = useState<Sample[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   const fetchSamples = useCallback(async () => {
     try {
@@ -80,6 +78,20 @@ export default function DashboardPage() {
   useEffect(() => {
     fetchSamples();
   }, [fetchSamples]);
+
+  const filtered = useMemo(() => {
+    let result = samples;
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      result = result.filter((s) => sampleId(s.id).toLowerCase().includes(q));
+    }
+    if (statusFilter !== "all") {
+      result = result.filter((s) => s.status === statusFilter);
+    }
+    return result;
+  }, [samples, search, statusFilter]);
+
+  const hasFilters = search.trim() !== "" || statusFilter !== "all";
 
   const inProgress = samples.filter((s) => s.status === "in_progress").length;
   const flagged = samples.filter((s) => s.status === "flagged").length;
@@ -144,6 +156,52 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* Search + filter bar (only when samples exist) */}
+      {!loading && samples.length > 0 && (
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search by Sample ID\u2026"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-9 w-full rounded-lg border bg-background pl-9 pr-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="size-3.5" />
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="h-9 rounded-lg border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="all">All statuses</option>
+              <option value="in_progress">In progress</option>
+              <option value="flagged">Flagged</option>
+              <option value="completed">Completed</option>
+            </select>
+            {hasFilters && (
+              <button
+                type="button"
+                onClick={() => { setSearch(""); setStatusFilter("all"); }}
+                className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Table or empty state */}
       {loading ? (
         <SkeletonTable rows={5} />
@@ -203,6 +261,16 @@ export default function DashboardPage() {
             </div>
           </div>
         </EmptyState>
+      ) : filtered.length === 0 ? (
+        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed bg-card p-8 text-center">
+          <Search className="size-8 text-muted-foreground/40" />
+          <p className="text-sm font-medium text-muted-foreground">
+            No samples match your filters
+          </p>
+          <p className="text-xs text-muted-foreground/70">
+            Try adjusting your search or status filter.
+          </p>
+        </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border bg-card shadow-xs">
           <table className="min-w-full text-sm">
@@ -224,7 +292,7 @@ export default function DashboardPage() {
               </tr>
             </thead>
             <tbody className="divide-y">
-              {samples.map((sample) => {
+              {filtered.map((sample) => {
                 const status = statusMap[sample.status] ?? {
                   label: sample.status,
                   variant: "pending" as const,
@@ -239,9 +307,6 @@ export default function DashboardPage() {
                         href={`/samples/${sample.id}`}
                         className="flex items-center gap-2.5"
                       >
-                        <span
-                          className={`size-1.5 shrink-0 rounded-full ${statusDot[sample.status] ?? "bg-muted-foreground/30"}`}
-                        />
                         <span className="font-mono text-xs font-semibold text-primary">
                           {sampleId(sample.id)}
                         </span>
@@ -253,7 +318,12 @@ export default function DashboardPage() {
                       </Badge>
                     </td>
                     <td className="px-4 py-3">
-                      <Badge variant={status.variant}>{status.label}</Badge>
+                      <Badge variant={status.variant} className="gap-1">
+                        {sample.status === "flagged" && <AlertTriangle className="size-3" />}
+                        {sample.status === "in_progress" && <Clock className="size-3" />}
+                        {sample.status === "completed" && <CheckCircle2 className="size-3" />}
+                        {status.label}
+                      </Badge>
                     </td>
                     <td className="px-4 py-3 text-muted-foreground tabular-nums">
                       {relativeTime(sample.createdAt)}

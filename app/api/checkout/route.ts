@@ -41,7 +41,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Plan not found" }, { status: 404 });
   }
 
-  // Get or create Stripe customer for this tenant
+  // Free tier — activate directly without Stripe
+  if (plan.stripePriceId === "free") {
+    await prisma.tenant.update({
+      where: { id: session.tenantId },
+      data: {
+        planId: plan.id,
+        subscriptionStatus: "active",
+      },
+    });
+
+    return NextResponse.json({ url: "/billing?success=true" });
+  }
+
+  // Paid tier — create Stripe checkout session
   const tenant = await prisma.tenant.findUnique({
     where: { id: session.tenantId },
   });
@@ -64,7 +77,6 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  // Create checkout session
   const checkoutSession = await stripe.checkout.sessions.create({
     customer: stripeCustomerId,
     client_reference_id: tenant.id,

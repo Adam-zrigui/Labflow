@@ -2,12 +2,14 @@ import Link from "next/link";
 import { requireAuth } from "@/lib/auth";
 import { UserMenu } from "@/components/user-menu";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { FlaskConical, TestTubeDiagonal, FileStack, CreditCard, Menu, X, ExternalLink } from "lucide-react";
+import { FlaskConical, TestTubeDiagonal, FileStack, CreditCard, Settings, Users, Menu, X, ExternalLink } from "lucide-react";
 
 const navItems = [
-  { label: "Samples", href: "/", icon: TestTubeDiagonal },
+  { label: "Samples", href: "/samples", icon: TestTubeDiagonal },
   { label: "Templates", href: "/templates", icon: FileStack },
+  { label: "Team", href: "/team", icon: Users },
   { label: "Billing", href: "/billing", icon: CreditCard },
+  { label: "Settings", href: "/settings", icon: Settings },
 ];
 
 export default async function DashboardLayout({

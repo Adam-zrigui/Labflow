@@ -1,0 +1,12 @@
+node_modules
+.next
+.git
+.env
+.env.*
+!.env.example
+generated
+*.md
+tests
+.vscode
+.opencode
+.agents

@@ -6,7 +6,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Public pages — no auth required
-  if (pathname === "/login" || pathname === "/signup" || pathname === "/terms" || pathname === "/privacy" || pathname === "/impressum") {
+  if (pathname === "/" || pathname === "/login" || pathname === "/signup" || pathname === "/terms" || pathname === "/privacy" || pathname === "/impressum") {
     return NextResponse.next();
   }
 

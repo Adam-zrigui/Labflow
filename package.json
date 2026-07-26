@@ -8,7 +8,10 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "db:seed": "npx prisma db seed"
+    "db:seed": "npx prisma db seed",
+    "docker:build": "docker compose build",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
@@ -31,6 +34,7 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-hook-form": "^7.83.0",
+    "resend": "^6.18.0",
     "shadcn": "^4.15.0",
     "stripe": "^22.3.2",
     "tailwind-merge": "^3.6.0",

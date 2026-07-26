@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton, SkeletonCard } from "@/components/ui/skeleton";
@@ -17,11 +18,14 @@ import {
   FileStack,
   Users,
   Zap,
+  Check,
+  X,
 } from "lucide-react";
 
 interface Plan {
   id: string;
   name: string;
+  stripePriceId: string;
   maxSamplesPerMonth: number;
   maxWorkflowTemplates: number;
   maxUsers: number;
@@ -30,11 +34,24 @@ interface Plan {
 
 interface BillingData {
   planName: string | null;
+  planId: string | null;
   subscriptionStatus: string;
   sampleCount: number;
   maxSamples: number;
   maxWorkflowTemplates: number;
   hasInstrumentWebhook: boolean;
+}
+
+const priceMap: Record<string, string> = {
+  starter: "$0",
+  pro: "$99",
+  enterprise: "$299",
+};
+
+function formatLimit(n: number): string {
+  if (n >= 999999) return "Unlimited";
+  if (n >= 999) return "Unlimited";
+  return n.toLocaleString();
 }
 
 function BillingSkeleton() {
@@ -64,6 +81,7 @@ function BillingSkeleton() {
 }
 
 export default function BillingPage() {
+  const router = useRouter();
   const [data, setData] = useState<BillingData | null>(null);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
@@ -112,7 +130,14 @@ export default function BillingPage() {
         body: JSON.stringify({ planId }),
       });
       const body = await res.json();
-      if (body.url) window.location.href = body.url;
+      if (body.url) {
+        // Free tier returns a relative path, paid tier returns a Stripe URL
+        if (body.url.startsWith("/")) {
+          router.push(body.url);
+        } else {
+          window.location.href = body.url;
+        }
+      }
     } catch {
       setError("Failed to start checkout");
     } finally {
@@ -162,8 +187,12 @@ export default function BillingPage() {
 
         {plans.length > 0 ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {plans.map((plan, idx) => {
-              const isRecommended = idx === plans.length - 1;
+            {plans.map((plan) => {
+              const isFree = plan.stripePriceId === "free";
+              const isRecommended = plan.id === "pro";
+              const price = priceMap[plan.id] ?? "?";
+              const isCurrentPlan = data?.planId === plan.id;
+
               return (
                 <div
                   key={plan.id}
@@ -173,47 +202,102 @@ export default function BillingPage() {
                       : ""
                   }`}
                 >
-                  {/* Gradient header */}
-                  <div className={`px-6 pt-5 pb-4 ${isRecommended ? "bg-gradient-to-br from-primary/10 via-primary/5 to-transparent" : "bg-gradient-to-br from-muted/50 to-transparent"}`}>
-                    <h3 className="text-lg font-semibold">{plan.name}</h3>
-                    {isRecommended && (
-                      <span className="mt-1.5 inline-block rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] font-medium text-primary">
-                        Recommended
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex flex-1 flex-col px-6 pb-6 pt-2">
-                    <div className="mb-6 flex-1 space-y-3">
-                      <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
-                        <TestTubeDiagonal className="size-4 shrink-0 text-primary" />
-                        {plan.maxSamplesPerMonth.toLocaleString()} samples/mo
-                      </div>
-                      <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
-                        <FileStack className="size-4 shrink-0 text-primary" />
-                        {plan.maxWorkflowTemplates} templates
-                      </div>
-                      <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
-                        <Users className="size-4 shrink-0 text-primary" />
-                        {plan.maxUsers} users
-                      </div>
-                      {plan.hasInstrumentWebhook && (
-                        <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
-                          <Zap className="size-4 shrink-0 text-primary" />
-                          Instrument webhooks
-                        </div>
+                  {/* Header */}
+                  <div
+                    className={`px-6 pt-5 pb-4 ${
+                      isRecommended
+                        ? "bg-gradient-to-br from-primary/10 via-primary/5 to-transparent"
+                        : "bg-gradient-to-br from-muted/50 to-transparent"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-semibold">{plan.name}</h3>
+                      {isRecommended && (
+                        <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] font-medium text-primary">
+                          Recommended
+                        </span>
                       )}
                     </div>
+                    <div className="mt-3 flex items-baseline gap-1">
+                      <span className="text-3xl font-bold tracking-tight">
+                        {price}
+                      </span>
+                      {!isFree && (
+                        <span className="text-sm text-muted-foreground">
+                          /mo
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-1 flex-col px-6 pb-6 pt-2">
+                    <div className="mb-6 flex-1 space-y-3">
+                      {/* Samples */}
+                      <div className="flex items-center gap-2.5 text-sm">
+                        <TestTubeDiagonal className="size-4 shrink-0 text-primary" />
+                        <span className="text-muted-foreground">
+                          <span className="font-medium text-foreground">
+                            {formatLimit(plan.maxSamplesPerMonth)}
+                          </span>{" "}
+                          samples/mo
+                        </span>
+                      </div>
+                      {/* Templates */}
+                      <div className="flex items-center gap-2.5 text-sm">
+                        <FileStack className="size-4 shrink-0 text-primary" />
+                        <span className="text-muted-foreground">
+                          <span className="font-medium text-foreground">
+                            {formatLimit(plan.maxWorkflowTemplates)}
+                          </span>{" "}
+                          {plan.maxWorkflowTemplates >= 999
+                            ? ""
+                            : "templates"}
+                        </span>
+                      </div>
+                      {/* Users */}
+                      <div className="flex items-center gap-2.5 text-sm">
+                        <Users className="size-4 shrink-0 text-primary" />
+                        <span className="text-muted-foreground">
+                          <span className="font-medium text-foreground">
+                            {formatLimit(plan.maxUsers)}
+                          </span>{" "}
+                          {plan.maxUsers >= 999 ? "" : "users"}
+                        </span>
+                      </div>
+                      {/* Webhooks */}
+                      <div className="flex items-center gap-2.5 text-sm">
+                        {plan.hasInstrumentWebhook ? (
+                          <Check className="size-4 shrink-0 text-green-600 dark:text-green-400" />
+                        ) : (
+                          <X className="size-4 shrink-0 text-muted-foreground/40" />
+                        )}
+                        <span
+                          className={
+                            plan.hasInstrumentWebhook
+                              ? "text-muted-foreground"
+                              : "text-muted-foreground/50"
+                          }
+                        >
+                          Instrument webhooks
+                        </span>
+                      </div>
+                    </div>
+
                     <Button
                       onClick={() => handleCheckout(plan.id)}
-                      disabled={checkoutLoading !== null}
+                      disabled={checkoutLoading !== null || isCurrentPlan}
                       className="w-full gap-1.5"
                       variant={isRecommended ? "default" : "outline"}
                     >
                       {checkoutLoading === plan.id ? (
                         <>
                           <div className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                          Redirecting\u2026
+                          {isFree ? "Activating\u2026" : "Redirecting\u2026"}
                         </>
+                      ) : isCurrentPlan ? (
+                        "Current plan"
+                      ) : isFree ? (
+                        "Get started"
                       ) : (
                         <>
                           <CreditCard className="size-4" />
@@ -246,7 +330,7 @@ export default function BillingPage() {
                 <div className="flex items-start gap-2 rounded-lg bg-background p-3">
                   <FileStack className="size-4 mt-0.5 shrink-0 text-primary" />
                   <p className="text-xs text-muted-foreground">
-                    Unlimited workflow templates
+                    Workflow template library
                   </p>
                 </div>
                 <div className="flex items-start gap-2 rounded-lg bg-background p-3">
@@ -296,7 +380,9 @@ export default function BillingPage() {
                 <CreditCard className="size-5" />
               </div>
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Current plan</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Current plan
+                </p>
                 <p className="text-lg font-semibold">{data.planName}</p>
               </div>
             </div>
@@ -310,7 +396,7 @@ export default function BillingPage() {
             <ProgressBar
               value={data.sampleCount}
               max={data.maxSamples}
-              label={`${data.sampleCount} of ${data.maxSamples} samples this month`}
+              label={`${data.sampleCount} of ${formatLimit(data.maxSamples)} samples this month`}
             />
           </div>
 
@@ -318,7 +404,7 @@ export default function BillingPage() {
           <div className="mb-5 flex flex-wrap gap-4 text-sm text-muted-foreground">
             <span className="flex items-center gap-1.5">
               <FileStack className="size-3.5" />
-              {data.maxWorkflowTemplates} templates
+              {formatLimit(data.maxWorkflowTemplates)} templates
             </span>
             {data.hasInstrumentWebhook && (
               <span className="flex items-center gap-1.5">

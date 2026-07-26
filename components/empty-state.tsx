@@ -310,6 +310,38 @@ function NoPlansIllustration({ className }: { className?: string }) {
   );
 }
 
+function UsersIllustration({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 80 80"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={cn("size-16", className)}
+    >
+      {/* Left person */}
+      <circle cx="30" cy="28" r="8" stroke="currentColor" strokeWidth="2" opacity="0.4" />
+      <path
+        d="M16 56c0-8 6-14 14-14s14 6 14 14"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        opacity="0.3"
+      />
+      {/* Right person (foreground) */}
+      <circle cx="52" cy="26" r="9" stroke="currentColor" strokeWidth="2" />
+      <path
+        d="M36 58c0-9 7-16 16-16s16 7 16 16"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      {/* Plus sign */}
+      <line x1="66" y1="14" x2="66" y2="26" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.4" />
+      <line x1="60" y1="20" x2="72" y2="20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.4" />
+    </svg>
+  );
+}
+
 export {
   EmptyState,
   FlaskIllustration,
@@ -317,4 +349,5 @@ export {
   CreditCardIllustration,
   NotFoundIllustration,
   NoPlansIllustration,
+  UsersIllustration,
 };

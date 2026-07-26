@@ -26,6 +26,7 @@ export async function GET(_request: NextRequest) {
   );
 
   return NextResponse.json({
+    planId: tenant.planId ?? null,
     planName: tenant.plan?.name ?? null,
     stripePriceId: tenant.plan?.stripePriceId ?? null,
     subscriptionStatus: tenant.subscriptionStatus,

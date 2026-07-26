@@ -12,6 +12,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   Loader2,
+  Clock,
   Eye,
   EyeOff,
 } from "lucide-react";
@@ -69,11 +70,23 @@ function sampleId(id: string) {
 
 const statusBadge: Record<
   string,
-  { label: string; variant: "inProgress" | "flagged" | "completed" }
+  { label: string; variant: "inProgress" | "flagged" | "completed"; icon: React.ReactNode }
 > = {
-  in_progress: { label: "In progress", variant: "inProgress" },
-  flagged: { label: "Flagged", variant: "flagged" },
-  completed: { label: "Completed", variant: "completed" },
+  in_progress: {
+    label: "In progress",
+    variant: "inProgress",
+    icon: <Clock className="size-3" />,
+  },
+  flagged: {
+    label: "Flagged",
+    variant: "flagged",
+    icon: <AlertTriangle className="size-3" />,
+  },
+  completed: {
+    label: "Completed",
+    variant: "completed",
+    icon: <CheckCircle2 className="size-3" />,
+  },
 };
 
 function SampleSkeleton() {
@@ -115,6 +128,7 @@ export default function SampleDetailPage() {
   const [loading, setLoading] = useState(true);
   const [showAudit, setShowAudit] = useState(false);
   const [advancing, setAdvancing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchSample = useCallback(async () => {
     try {
@@ -134,6 +148,33 @@ export default function SampleDetailPage() {
   const handleAdvance = async () => {
     if (!sample || advancing) return;
     setAdvancing(true);
+    setError(null);
+
+    const prevIndex = sample.currentStageIndex;
+    const prevHistory = sample.history;
+    const optimisticHistory: HistoryEntry = {
+      id: `temp-${Date.now()}`,
+      stageIndex: prevIndex,
+      enteredAt: new Date().toISOString(),
+      exitedAt: null,
+      actorId: "you",
+      outcome: null,
+    };
+
+    setSample((prev) =>
+      prev
+        ? {
+            ...prev,
+            currentStageIndex: prevIndex + 1,
+            status:
+              prevIndex + 1 >= prev.template.stages.length
+                ? "completed"
+                : prev.status,
+            history: [...prev.history, optimisticHistory],
+          }
+        : null
+    );
+
     try {
       const res = await fetch(`/api/samples/${sample.id}/advance`, {
         method: "POST",
@@ -141,9 +182,32 @@ export default function SampleDetailPage() {
       if (res.ok) {
         const updated = await res.json();
         setSample((prev) => (prev ? { ...prev, ...updated } : null));
+      } else {
+        // rollback
+        setSample((prev) =>
+          prev
+            ? {
+                ...prev,
+                currentStageIndex: prevIndex,
+                status: sample.status,
+                history: prevHistory,
+              }
+            : null
+        );
+        setError("Failed to advance sample. Please try again.");
       }
     } catch {
-      // silent
+      setSample((prev) =>
+        prev
+          ? {
+              ...prev,
+              currentStageIndex: prevIndex,
+              status: sample.status,
+              history: prevHistory,
+            }
+          : null
+      );
+      setError("Network error. Please try again.");
     } finally {
       setAdvancing(false);
     }
@@ -159,7 +223,7 @@ export default function SampleDetailPage() {
           description="This sample may have been deleted or the ID is incorrect."
           illustration={<NotFoundIllustration />}
           action={
-            <Link href="/">
+            <Link href="/samples">
               <Button variant="outline" size="sm" className="gap-1.5">
                 <ArrowLeft className="size-3.5" />
                 Back to samples
@@ -175,6 +239,7 @@ export default function SampleDetailPage() {
   const sb = statusBadge[sample.status] ?? {
     label: sample.status,
     variant: "inProgress" as const,
+    icon: null,
   };
   const instrumentResult = sample.metadata?.instrumentResult as
     | { value: number; unit: string }
@@ -191,12 +256,19 @@ export default function SampleDetailPage() {
     <div className="flex flex-col gap-6 p-6 lg:p-8">
       {/* Back link */}
       <Link
-        href="/"
+        href="/samples"
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft className="size-3.5" />
         Samples
       </Link>
+
+      {/* Error banner */}
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-800/50 dark:bg-red-950/50 dark:text-red-300">
+          {error}
+        </div>
+      )}
 
       {/* Flag banner */}
       {isFlagged && (
@@ -237,7 +309,10 @@ export default function SampleDetailPage() {
             <h1 className="text-xl font-semibold tracking-tight">
               {sampleId(sample.id)}
             </h1>
-            <Badge variant={sb.variant}>{sb.label}</Badge>
+            <Badge variant={sb.variant} className="gap-1">
+              {sb.icon}
+              {sb.label}
+            </Badge>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
             {sample.template.name}
@@ -364,7 +439,9 @@ export default function SampleDetailPage() {
                   actor={
                     h.actorId === "instrument-webhook"
                       ? "Instrument"
-                      : `User ${h.actorId.slice(0, 8)}`
+                      : h.actorId === "you"
+                        ? "You"
+                        : `User ${h.actorId.slice(0, 8)}`
                   }
                   description={
                     h.outcome === "flagged"
@@ -385,7 +462,7 @@ export default function SampleDetailPage() {
             <button
               type="button"
               onClick={() => setShowAudit(!showAudit)}
-              className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+              className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded"
             >
               {showAudit ? (
                 <EyeOff className="size-3.5" />
