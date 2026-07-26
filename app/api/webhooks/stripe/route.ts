@@ -7,6 +7,12 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? "");
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET ?? "";
 
+async function lookupPlanByPriceId(priceId: string) {
+  return prisma.plan.findUnique({
+    where: { stripePriceId: priceId },
+  });
+}
+
 export async function POST(request: NextRequest) {
   const body = await request.text();
   const signature = request.headers.get("stripe-signature") ?? "";
@@ -37,15 +43,29 @@ export async function POST(request: NextRequest) {
         const session = event.data.object as Stripe.Checkout.Session;
         const tenantId = session.client_reference_id;
 
-        if (tenantId && session.customer) {
-          await prisma.tenant.update({
-            where: { id: tenantId },
-            data: {
-              stripeCustomerId: session.customer as string,
-              subscriptionStatus: "active",
-            },
-          });
+        if (!tenantId || !session.customer) break;
+
+        // Resolve the plan from the subscription's price
+        let planId: string | null = null;
+        if (session.subscription) {
+          const subscription = await stripe.subscriptions.retrieve(
+            session.subscription as string
+          );
+          const priceId = subscription.items.data[0]?.price?.id;
+          if (priceId) {
+            const plan = await lookupPlanByPriceId(priceId);
+            planId = plan?.id ?? null;
+          }
         }
+
+        await prisma.tenant.update({
+          where: { id: tenantId },
+          data: {
+            stripeCustomerId: session.customer as string,
+            subscriptionStatus: "active",
+            ...(planId ? { planId } : {}),
+          },
+        });
         break;
       }
 
@@ -54,9 +74,20 @@ export async function POST(request: NextRequest) {
         const customerId = subscription.customer as string;
         const status = subscription.status;
 
+        // Resolve the plan from the subscription's price
+        const priceId = subscription.items.data[0]?.price?.id;
+        let planId: string | null = null;
+        if (priceId) {
+          const plan = await lookupPlanByPriceId(priceId);
+          planId = plan?.id ?? null;
+        }
+
         await prisma.tenant.updateMany({
           where: { stripeCustomerId: customerId },
-          data: { subscriptionStatus: status },
+          data: {
+            subscriptionStatus: status,
+            ...(planId ? { planId } : {}),
+          },
         });
         break;
       }

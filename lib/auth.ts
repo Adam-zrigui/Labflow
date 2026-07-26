@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { NextResponse } from "next/server";
 import { buildSessionToken, verifySessionToken, type SessionPayload } from "./session";
 
-export interface Session extends SessionPayload {}
+export type Session = SessionPayload;
 
 const COOKIE_OPTIONS = {
   httpOnly: true,

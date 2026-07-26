@@ -59,6 +59,7 @@ describe("getSession", () => {
         tenantId: "tenant-1",
         role: "Admin",
         firebaseUid: "firebase-uid-1",
+        email: "test@example.com",
       },
     } as never);
 
@@ -67,6 +68,7 @@ describe("getSession", () => {
     expect(result!.userId).toBe("user-1");
     expect(result!.tenantId).toBe("tenant-1");
     expect(result!.role).toBe("Admin");
+    expect(result!.email).toBe("test@example.com");
   });
 });
 
@@ -91,6 +93,7 @@ describe("requireAuth", () => {
         tenantId: "tenant-1",
         role: "Technician",
         firebaseUid: "firebase-uid-2",
+        email: "tech@example.com",
       },
     } as never);
 
@@ -120,6 +123,7 @@ describe("requireApiAuth", () => {
         tenantId: "tenant-2",
         role: "SeniorScientist",
         firebaseUid: "firebase-uid-3",
+        email: "senior@example.com",
       },
     } as never);
 
@@ -141,6 +145,7 @@ describe("createSessionCookie / clearSessionCookie", () => {
       userId: "user-1",
       tenantId: "tenant-1",
       role: "Admin",
+      email: "admin@example.com",
     });
 
     expect(response).toBeInstanceOf(NextResponse);

@@ -22,6 +22,7 @@ vi.mock("@/lib/auth", async () => {
       tenantId: "tenant-1",
       role: "Admin",
       firebaseUid: "firebase-uid-1",
+      email: "user@lab.com",
     })),
     requireApiAuth: vi.fn(() => ({
       session: {
@@ -29,6 +30,7 @@ vi.mock("@/lib/auth", async () => {
         tenantId: "tenant-1",
         role: "Admin",
         firebaseUid: "firebase-uid-1",
+        email: "user@lab.com",
       },
     })),
     getSession: vi.fn(() => ({
@@ -36,6 +38,7 @@ vi.mock("@/lib/auth", async () => {
       tenantId: "tenant-1",
       role: "Admin",
       firebaseUid: "firebase-uid-1",
+      email: "user@lab.com",
     })),
     createSessionCookie: vi.fn(
       async () =>
@@ -68,6 +71,7 @@ vi.mock("jose", () => ({
         tenantId: "tenant-1",
         role: "Admin",
         firebaseUid: "firebase-uid-1",
+        email: "user@lab.com",
       },
     })
   ),
@@ -124,6 +128,7 @@ describe("POST /api/auth/session — smoke", () => {
       id: "user-1",
       tenantId: "tenant-1",
       role: "Admin",
+      email: "user@lab.com",
     } as never);
 
     const req = buildRequest({ body: { idToken: "valid-token" } });

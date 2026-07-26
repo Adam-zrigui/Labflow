@@ -9,7 +9,7 @@ vi.mock("next/navigation", () => ({
     replace: vi.fn(),
     back: vi.fn(),
   }),
-  usePathname: () => "/dashboard",
+  usePathname: () => "/",
   useSearchParams: () => new URLSearchParams(),
 }));
 

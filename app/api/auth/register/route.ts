@@ -41,6 +41,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // If the user already exists in the DB (e.g. previous attempt created
+    // the Firebase auth user but failed before writing to the DB, or the
+    // user completed registration on another tab), just log them in.
+    const existingUser = await prisma.user.findUnique({
+      where: { firebaseUid },
+      select: { id: true, tenantId: true, role: true, email: true },
+    });
+
+    if (existingUser) {
+      const response = await createSessionCookie({
+        firebaseUid,
+        userId: existingUser.id,
+        tenantId: existingUser.tenantId,
+        role: existingUser.role,
+        email: existingUser.email,
+      });
+      return response;
+    }
+
     // Create Tenant and User in a transaction
     const { user } = await prisma.$transaction(async (tx: PrismaTransactionClient) => {
       const tenant = await tx.tenant.create({
@@ -65,6 +84,7 @@ export async function POST(request: NextRequest) {
       userId: user.id,
       tenantId: user.tenantId,
       role: user.role,
+      email: user.email,
     });
 
     return response;

@@ -5,34 +5,41 @@ import { verifySessionToken } from "@/lib/session";
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Only guard dashboard routes and non-auth/api routes
-  const isProtected = pathname.startsWith("/dashboard")
-    ? true
-    : pathname.startsWith("/api") &&
-      !pathname.startsWith("/api/auth") &&
-      !pathname.startsWith("/api/webhooks");
-
-  if (!isProtected) {
+  // Public pages — no auth required
+  if (pathname === "/login" || pathname === "/signup" || pathname === "/terms" || pathname === "/privacy" || pathname === "/impressum") {
     return NextResponse.next();
   }
 
+  const isApiRoute = pathname.startsWith("/api");
+  const isPublicApi =
+    pathname.startsWith("/api/auth") || pathname.startsWith("/api/webhooks");
+
+  if (isApiRoute && isPublicApi) {
+    return NextResponse.next();
+  }
+
+  // Everything else requires a valid session
   const sessionCookie = request.cookies.get("session");
 
   if (!sessionCookie?.value) {
-    const loginUrl = new URL("/login", request.url);
-    return NextResponse.redirect(loginUrl);
+    if (isApiRoute) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    return NextResponse.redirect(new URL("/login", request.url));
   }
 
   try {
     await verifySessionToken(sessionCookie.value);
   } catch {
-    const loginUrl = new URL("/login", request.url);
-    return NextResponse.redirect(loginUrl);
+    if (isApiRoute) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    return NextResponse.redirect(new URL("/login", request.url));
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/api/:path*"],
+  matcher: ["/((?!_next|favicon.ico).*)"],
 };

@@ -5,6 +5,7 @@ export interface SessionPayload {
   userId: string;
   tenantId: string;
   role: string;
+  email: string;
 }
 
 export const SESSION_COOKIE_NAME = "session";
@@ -40,5 +41,6 @@ export async function verifySessionToken(token: string): Promise<SessionPayload>
     userId: payload.userId,
     tenantId: payload.tenantId,
     role: payload.role,
+    email: typeof payload.email === "string" ? payload.email : "",
   };
 }

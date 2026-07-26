@@ -14,6 +14,7 @@ vi.mock("@/lib/auth", () => ({
     tenantId: "tenant-1",
     role: "Admin",
     firebaseUid: "firebase-uid-1",
+    email: "user@lab.com",
   })),
   requireApiAuth: vi.fn(() => ({
     session: {
@@ -21,6 +22,7 @@ vi.mock("@/lib/auth", () => ({
       tenantId: "tenant-1",
       role: "Admin",
       firebaseUid: "firebase-uid-1",
+      email: "user@lab.com",
     },
   })),
   getSession: vi.fn(() => ({
@@ -28,6 +30,7 @@ vi.mock("@/lib/auth", () => ({
     tenantId: "tenant-1",
     role: "Admin",
     firebaseUid: "firebase-uid-1",
+    email: "user@lab.com",
   })),
   createSessionCookie: vi.fn(),
   clearSessionCookie: vi.fn(),
