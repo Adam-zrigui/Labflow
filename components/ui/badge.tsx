@@ -2,29 +2,29 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const badgeVariants = cva(
-  "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap border transition-colors",
+  "stamp-badge",
   {
     variants: {
       variant: {
         default:
-          "border-transparent bg-secondary text-secondary-foreground",
+          "border-border text-muted-foreground bg-muted",
         inProgress:
-          "border-transparent bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300",
+          "border-primary text-primary bg-primary/5",
         completed:
-          "border-transparent bg-green-50 text-green-700 dark:bg-green-950/50 dark:text-green-300",
+          "border-green-600 text-green-700 bg-green-50 dark:border-green-500 dark:text-green-400 dark:bg-green-950/50",
         flagged:
-          "border-transparent bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300",
+          "border-amber-600 text-amber-700 bg-amber-50 dark:border-amber-500 dark:text-amber-400 dark:bg-amber-950/50",
         pending:
-          "border-transparent bg-muted text-muted-foreground",
+          "border-border text-muted-foreground bg-muted",
         active:
-          "border-transparent bg-green-50 text-green-700 dark:bg-green-950/50 dark:text-green-300",
+          "border-green-600 text-green-700 bg-green-50 dark:border-green-500 dark:text-green-400 dark:bg-green-950/50",
         pastDue:
-          "border-transparent bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300",
+          "border-amber-600 text-amber-700 bg-amber-50 dark:border-amber-500 dark:text-amber-400 dark:bg-amber-950/50",
         canceled:
-          "border-transparent bg-muted text-muted-foreground",
+          "border-border text-muted-foreground bg-muted",
         automated:
-          "border-transparent bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300",
-        outline: "border-border text-foreground",
+          "border-primary text-primary bg-primary/5",
+        outline: "border-border text-foreground bg-transparent",
       },
     },
     defaultVariants: {

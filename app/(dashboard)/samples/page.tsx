@@ -20,9 +20,6 @@ import {
   CheckCircle2,
   Clock,
   ArrowRight,
-  Settings2,
-  TestTubeDiagonal,
-  Activity,
   Search,
   X,
   Download,
@@ -173,7 +170,7 @@ export default function SamplesPage() {
     <div className="flex flex-col gap-6 p-6 lg:p-8">
       {/* Toast */}
       {toast && (
-        <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800 dark:border-green-800/50 dark:bg-green-950/50 dark:text-green-300 flex items-center gap-2">
+        <div className="border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-800 dark:border-green-700 dark:bg-green-950/50 dark:text-green-300 flex items-center gap-2">
           <CheckCircle2 className="size-4 shrink-0" />
           {toast}
         </div>
@@ -181,24 +178,11 @@ export default function SamplesPage() {
 
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight">Samples</h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            Track specimens through your lab&apos;s workflow
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {!loading && samples.length > 0 && (
-            <Button variant="outline" size="sm" onClick={handleExport} className="gap-1.5">
-              <Download className="size-3.5" />
-              Export
-            </Button>
-          )}
-          <Button onClick={() => router.push("/samples/new")} className="gap-1.5">
-            <Plus className="size-4" />
-            Register sample
-          </Button>
-        </div>
+        <h1 className="text-xl font-semibold tracking-tight font-[family-name:var(--font-space-grotesk)]">Samples</h1>
+        <Button onClick={() => router.push("/samples/new")} className="gap-1.5">
+          <Plus className="size-4" />
+          Register sample
+        </Button>
       </div>
 
       {/* Stat cards */}
@@ -210,32 +194,17 @@ export default function SamplesPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <div className="flex items-center gap-4 rounded-xl border bg-card p-4 shadow-xs">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400">
-              <Clock className="size-5" />
-            </div>
-            <div>
-              <p className="text-xs font-medium text-muted-foreground">In progress</p>
-              <p className="text-2xl font-semibold tabular-nums">{inProgress}</p>
-            </div>
+          <div className="border border-border bg-card p-4">
+            <p className="text-xs text-muted-foreground">In progress</p>
+            <p className="text-2xl font-semibold tabular-nums font-[family-name:var(--font-space-grotesk)] text-foreground">{inProgress}</p>
           </div>
-          <div className="flex items-center gap-4 rounded-xl border bg-card p-4 shadow-xs">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400">
-              <AlertTriangle className="size-5" />
-            </div>
-            <div>
-              <p className="text-xs font-medium text-muted-foreground">Flagged for review</p>
-              <p className="text-2xl font-semibold tabular-nums">{flagged}</p>
-            </div>
+          <div className="border border-border bg-card p-4">
+            <p className="text-xs text-muted-foreground">Flagged</p>
+            <p className="text-2xl font-semibold tabular-nums font-[family-name:var(--font-space-grotesk)] text-amber-600">{flagged}</p>
           </div>
-          <div className="flex items-center gap-4 rounded-xl border bg-card p-4 shadow-xs">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-green-50 text-green-600 dark:bg-green-950/50 dark:text-green-400">
-              <CheckCircle2 className="size-5" />
-            </div>
-            <div>
-              <p className="text-xs font-medium text-muted-foreground">Completed today</p>
-              <p className="text-2xl font-semibold tabular-nums">{todayCompleted}</p>
-            </div>
+          <div className="border border-border bg-card p-4">
+            <p className="text-xs text-muted-foreground">Completed</p>
+            <p className="text-2xl font-semibold tabular-nums font-[family-name:var(--font-space-grotesk)] text-green-600">{todayCompleted}</p>
           </div>
         </div>
       )}
@@ -250,7 +219,7 @@ export default function SamplesPage() {
               placeholder="Search by Sample ID\u2026"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="h-9 w-full rounded-lg border bg-background pl-9 pr-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              className="h-9 w-full border border-border bg-background pl-9 pr-3 text-sm font-mono placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             />
             {search && (
               <button
@@ -266,7 +235,7 @@ export default function SamplesPage() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="h-9 rounded-lg border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              className="h-9 border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             >
               <option value="all">All statuses</option>
               <option value="in_progress">In progress</option>
@@ -288,7 +257,7 @@ export default function SamplesPage() {
 
       {/* Bulk action bar */}
       {selected.size > 0 && (
-        <div className="flex items-center gap-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-2.5">
+        <div className="flex items-center gap-3 border border-primary/30 bg-primary/5 px-4 py-2.5">
           <span className="text-sm font-medium text-foreground">
             {selected.size} sample{selected.size !== 1 ? "s" : ""} selected
           </span>
@@ -333,53 +302,9 @@ export default function SamplesPage() {
               Register sample
             </Button>
           }
-        >
-          <div className="space-y-3">
-            <p className="text-center text-xs font-medium uppercase tracking-wider text-muted-foreground/60">
-              How it works
-            </p>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <Link
-                href="/templates"
-                className="group flex flex-col items-center gap-2.5 rounded-xl border bg-background p-4 text-center transition-colors hover:border-primary/30 hover:bg-primary/5"
-              >
-                <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
-                  <Settings2 className="size-4.5" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium">1. Create a template</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    Define workflow stages
-                  </p>
-                </div>
-              </Link>
-              <div className="flex flex-col items-center gap-2.5 rounded-xl border bg-background p-4 text-center">
-                <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                  <TestTubeDiagonal className="size-4.5" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium">2. Register a sample</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    Attach it to a template
-                  </p>
-                </div>
-              </div>
-              <div className="flex flex-col items-center gap-2.5 rounded-xl border bg-background p-4 text-center">
-                <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                  <Activity className="size-4.5" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium">3. Track progress</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    Advance through stages
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </EmptyState>
+        />
       ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed bg-card p-8 text-center">
+        <div className="flex flex-col items-center gap-3 border border-dashed border-border bg-card p-8 text-center">
           <Search className="size-8 text-muted-foreground/40" />
           <p className="text-sm font-medium text-muted-foreground">
             No samples match your filters
@@ -389,11 +314,11 @@ export default function SamplesPage() {
           </p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border bg-card shadow-xs">
+        <div className="overflow-x-auto border border-border bg-card">
           <table className="min-w-full text-sm">
             <thead>
-              <tr className="border-b bg-muted/30">
-                <th className="w-10 px-4 py-3">
+              <tr className="border-b border-border">
+                <th className="w-10 px-3 py-2">
                   <input
                     type="checkbox"
                     checked={allVisibleSelected}
@@ -402,22 +327,22 @@ export default function SamplesPage() {
                     aria-label="Select all samples"
                   />
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  Sample
+                <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground font-[family-name:var(--font-space-grotesk)]">
+                  Sample ID
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground font-[family-name:var(--font-space-grotesk)]">
                   Stage
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  Status
+                <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground font-[family-name:var(--font-space-grotesk)]">
+                  Assigned
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  Last updated
+                <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground font-[family-name:var(--font-space-grotesk)]">
+                  Updated
                 </th>
-                <th className="px-4 py-3" />
+                <th className="px-3 py-2" />
               </tr>
             </thead>
-            <tbody className="divide-y">
+            <tbody>
               {filtered.map((sample) => {
                 const status = statusMap[sample.status] ?? {
                   label: sample.status,
@@ -426,9 +351,9 @@ export default function SamplesPage() {
                 return (
                   <tr
                     key={sample.id}
-                    className="group transition-colors hover:bg-muted/30"
+                    className="group border-b border-border last:border-0 transition-colors hover:bg-muted/30"
                   >
-                    <td className="w-10 px-4 py-3">
+                    <td className="w-10 px-3 py-2">
                       <input
                         type="checkbox"
                         checked={selected.has(sample.id)}
@@ -437,33 +362,26 @@ export default function SamplesPage() {
                         aria-label={`Select ${sampleId(sample.id)}`}
                       />
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-2">
                       <Link
                         href={`/samples/${sample.id}`}
                         className="flex items-center gap-2.5"
                       >
-                        <span className="font-mono text-xs font-semibold text-primary">
+                        <span className="specimen-chip">
                           {sampleId(sample.id)}
                         </span>
                       </Link>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-2">
                       <Badge variant="inProgress">
                         Stage {sample.currentStageIndex + 1}
                       </Badge>
                     </td>
-                    <td className="px-4 py-3">
-                      <Badge variant={status.variant} className="gap-1">
-                        {sample.status === "flagged" && <AlertTriangle className="size-3" />}
-                        {sample.status === "in_progress" && <Clock className="size-3" />}
-                        {sample.status === "completed" && <CheckCircle2 className="size-3" />}
-                        {status.label}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground tabular-nums">
+                    <td className="px-3 py-2 text-xs text-muted-foreground">—</td>
+                    <td className="px-3 py-2 text-muted-foreground font-mono text-xs tabular-nums">
                       {relativeTime(sample.createdAt)}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-2">
                       <Link
                         href={`/samples/${sample.id}`}
                         className="flex items-center gap-1 text-xs font-medium text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:text-foreground"

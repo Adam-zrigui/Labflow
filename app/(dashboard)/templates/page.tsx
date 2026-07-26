@@ -7,10 +7,8 @@ import { EmptyState, ClipboardIllustration } from "@/components/empty-state";
 import {
   Plus,
   ArrowLeft,
-  Trash2,
   ChevronUp,
   ChevronDown,
-  Settings2,
   Check,
 } from "lucide-react";
 
@@ -141,7 +139,7 @@ export default function TemplatesPage() {
             <Skeleton className="h-7 w-32" />
             <Skeleton className="h-4 w-56" />
           </div>
-          <Skeleton className="h-9 w-32 rounded-lg" />
+          <Skeleton className="h-9 w-32" />
         </div>
         <SkeletonCardGrid count={6} />
       </div>
@@ -163,10 +161,133 @@ export default function TemplatesPage() {
               <ArrowLeft className="size-3.5" />
               Back
             </button>
-            <h1 className="text-xl font-semibold tracking-tight">
+            <h1 className="text-xl font-semibold tracking-tight font-[family-name:var(--font-space-grotesk)]">
               {editing.id ? "Edit template" : "New template"}
             </h1>
           </div>
+        </div>
+
+        {saved && (
+          <div className="border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-700 dark:border-green-700 dark:bg-green-950/50 dark:text-green-400 flex items-center gap-2">
+            <Check className="size-4" />
+            Template saved successfully
+          </div>
+        )}
+
+        {/* Name — inline with label, no card wrapper */}
+        <div className="flex flex-col gap-1.5">
+          <label
+            htmlFor="template-name"
+            className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground font-[family-name:var(--font-space-grotesk)]"
+          >
+            Template name
+          </label>
+          <input
+            id="template-name"
+            type="text"
+            value={editing.name}
+            onChange={(e) => setEditing({ ...editing, name: e.target.value })}
+            className="block w-full max-w-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground transition-shadow focus:outline-none focus:ring-2 focus:ring-ring/30"
+            placeholder="e.g. Standard QC workflow"
+          />
+        </div>
+
+        {/* Stages — hairline row list */}
+        <div className="flex flex-col gap-0">
+          <h2 className="mb-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground font-[family-name:var(--font-space-grotesk)]">
+            Stages
+          </h2>
+
+          <div className="divide-y divide-border border-t border-border">
+            {editing.stages.map((stage, idx) => (
+              <div
+                key={idx}
+                className="group flex items-center gap-3 py-3"
+              >
+                {/* Stage number — IBM Plex Mono, fixed width */}
+                <span className="w-8 shrink-0 text-center text-xs font-semibold text-primary font-[family-name:var(--font-ibm-plex-mono)]">
+                  {String(idx + 1).padStart(2, "0")}
+                </span>
+
+                {/* Stage name input */}
+                <input
+                  type="text"
+                  value={stage.name}
+                  onChange={(e) =>
+                    updateStage(idx, "name", e.target.value)
+                  }
+                  className="flex-1 min-w-0 border border-border bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground transition-shadow focus:outline-none focus:ring-2 focus:ring-ring/30"
+                  placeholder="e.g. DNA extraction"
+                />
+
+                {/* Role dropdown */}
+                <select
+                  value={stage.requiredRole}
+                  onChange={(e) =>
+                    updateStage(idx, "requiredRole", e.target.value)
+                  }
+                  className="w-40 shrink-0 border border-border bg-background px-3 py-1.5 text-sm text-foreground transition-shadow focus:outline-none focus:ring-2 focus:ring-ring/30"
+                >
+                  {ROLES.map((r) => (
+                    <option key={r} value={r}>
+                      {r}
+                    </option>
+                  ))}
+                </select>
+
+                {/* Requires approval checkbox — right-aligned */}
+                <label className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={stage.isApprovalGate ?? false}
+                    onChange={(e) =>
+                      updateStage(idx, "isApprovalGate", e.target.checked)
+                    }
+                    className="size-3.5 rounded border-input"
+                  />
+                  Requires approval
+                </label>
+
+                {/* Reorder arrows at far right */}
+                <div className="flex items-center gap-0.5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => moveStage(idx, -1)}
+                    disabled={idx === 0}
+                    className="rounded-md p-1.5 text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
+                    title="Move up"
+                  >
+                    <ChevronUp className="size-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveStage(idx, 1)}
+                    disabled={idx === editing.stages.length - 1}
+                    className="rounded-md p-1.5 text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
+                    title="Move down"
+                  >
+                    <ChevronDown className="size-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Add stage button */}
+          <Button variant="ghost" size="sm" onClick={addStage} className="mt-2 gap-1.5 self-start">
+            <Plus className="size-3.5" />
+            Add stage
+          </Button>
+        </div>
+
+        {/* Footer actions */}
+        <div className="flex items-center justify-end gap-3 pt-2">
+          <Button
+            variant="ghost"
+            onClick={() => setEditing(null)}
+          >
+            Cancel
+          </Button>
           <Button
             onClick={saveTemplate}
             disabled={saving || !editing.name.trim()}
@@ -177,151 +298,8 @@ export default function TemplatesPage() {
             ) : (
               <Check className="size-4" />
             )}
-            {saving ? "Saving\u2026" : "Save template"}
+            {saving ? "Saving\u2026" : "Save"}
           </Button>
-        </div>
-
-        {saved && (
-          <div className="flex items-center gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700 dark:border-green-800/50 dark:bg-green-950/50 dark:text-green-400">
-            <Check className="size-4" />
-            Template saved successfully
-          </div>
-        )}
-
-        {/* Name */}
-        <div className="rounded-xl border bg-card p-5 shadow-xs">
-          <label
-            htmlFor="template-name"
-            className="mb-2 block text-xs font-medium uppercase tracking-wider text-muted-foreground"
-          >
-            Template name
-          </label>
-          <input
-            id="template-name"
-            type="text"
-            value={editing.name}
-            onChange={(e) => setEditing({ ...editing, name: e.target.value })}
-            className="block w-full max-w-md rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground transition-shadow focus:outline-none focus:ring-2 focus:ring-ring/30"
-            placeholder="e.g. Standard QC workflow"
-          />
-        </div>
-
-        {/* Stages */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              Stages
-            </h2>
-            <Button variant="ghost" size="sm" onClick={addStage} className="gap-1.5">
-              <Plus className="size-3.5" />
-              Add stage
-            </Button>
-          </div>
-
-          {editing.stages.map((stage, idx) => (
-            <div
-              key={idx}
-              className="group flex flex-col gap-3 rounded-xl border bg-card p-4 shadow-xs transition-shadow hover:shadow-sm sm:flex-row sm:items-end"
-            >
-              {/* Stage number */}
-              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-xs font-semibold text-primary">
-                {idx + 1}
-              </div>
-
-              {/* Stage name */}
-              <div className="flex-1 min-w-[160px]">
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                  Stage name
-                </label>
-                <input
-                  type="text"
-                  value={stage.name}
-                  onChange={(e) =>
-                    updateStage(idx, "name", e.target.value)
-                  }
-                  className="block w-full rounded-lg border border-input bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground transition-shadow focus:outline-none focus:ring-2 focus:ring-ring/30"
-                  placeholder="e.g. DNA extraction"
-                />
-              </div>
-
-              {/* Role */}
-              <div className="w-full sm:w-auto">
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                  Required role
-                </label>
-                <select
-                  value={stage.requiredRole}
-                  onChange={(e) =>
-                    updateStage(idx, "requiredRole", e.target.value)
-                  }
-                  className="block w-full rounded-lg border border-input bg-background px-3 py-1.5 text-sm text-foreground transition-shadow focus:outline-none focus:ring-2 focus:ring-ring/30"
-                >
-                  {ROLES.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Checkboxes */}
-              <div className="flex items-center gap-4">
-                <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={stage.isApprovalGate ?? false}
-                    onChange={(e) =>
-                      updateStage(idx, "isApprovalGate", e.target.checked)
-                    }
-                    className="size-3.5 rounded border-input"
-                  />
-                  Approval gate
-                </label>
-                <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={stage.backgroundJob ?? false}
-                    onChange={(e) =>
-                      updateStage(idx, "backgroundJob", e.target.checked)
-                    }
-                    className="size-3.5 rounded border-input"
-                  />
-                  Automated
-                </label>
-              </div>
-
-              {/* Reorder / delete */}
-              <div className="flex items-center gap-0.5 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => moveStage(idx, -1)}
-                  disabled={idx === 0}
-                  className="rounded-md p-1.5 text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
-                  title="Move up"
-                >
-                  <ChevronUp className="size-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => moveStage(idx, 1)}
-                  disabled={idx === editing.stages.length - 1}
-                  className="rounded-md p-1.5 text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
-                  title="Move down"
-                >
-                  <ChevronDown className="size-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => removeStage(idx)}
-                  disabled={editing.stages.length <= 1}
-                  className="rounded-md p-1.5 text-muted-foreground hover:text-destructive disabled:opacity-30 transition-colors"
-                  title="Delete stage"
-                >
-                  <Trash2 className="size-3.5" />
-                </button>
-              </div>
-            </div>
-          ))}
         </div>
       </div>
     );
@@ -332,7 +310,7 @@ export default function TemplatesPage() {
     <div className="flex flex-col gap-6 p-6 lg:p-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Templates</h1>
+          <h1 className="text-xl font-semibold tracking-tight font-[family-name:var(--font-space-grotesk)]">Templates</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
             Define the stages a sample goes through
           </p>
@@ -356,10 +334,10 @@ export default function TemplatesPage() {
           }
         >
           <div className="space-y-3">
-            <p className="text-center text-xs font-medium uppercase tracking-wider text-muted-foreground/60">
+            <p className="text-center text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground/60 font-[family-name:var(--font-space-grotesk)]">
               What is a template?
             </p>
-            <div className="rounded-xl border bg-background p-4">
+            <div className="border border-border bg-background p-4">
               <p className="mb-3 text-sm text-muted-foreground">
                 A template is a reusable workflow that defines the steps a sample follows. Each stage can require a specific role and optionally gate approval.
               </p>
@@ -367,13 +345,12 @@ export default function TemplatesPage() {
                 {["Receipt", "Extraction", "Analysis", "Review", "Report"].map(
                   (name, i, arr) => (
                     <div key={name} className="flex items-center gap-2">
-                      <span className="shrink-0 rounded-lg bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
-                        {name}
+                      <span className="shrink-0 border border-primary/20 bg-primary/5 px-2.5 py-1 text-xs font-medium text-primary font-mono">
+                        {String(i + 1).padStart(2, "0")}
+                        <span className="ml-1.5">{name}</span>
                       </span>
                       {i < arr.length - 1 && (
-                        <span className="text-xs text-muted-foreground/40">
-                          &rarr;
-                        </span>
+                        <div className="w-4 h-px bg-border" />
                       )}
                     </div>
                   )
@@ -381,25 +358,25 @@ export default function TemplatesPage() {
               </div>
             </div>
             <div className="grid gap-2 text-left sm:grid-cols-2">
-              <div className="flex items-start gap-2 rounded-lg bg-background p-3">
+              <div className="flex items-start gap-2 border border-border bg-background p-3">
                 <Check className="size-4 mt-0.5 shrink-0 text-primary" />
                 <p className="text-xs text-muted-foreground">
                   Role-based access per stage
                 </p>
               </div>
-              <div className="flex items-start gap-2 rounded-lg bg-background p-3">
+              <div className="flex items-start gap-2 border border-border bg-background p-3">
                 <Check className="size-4 mt-0.5 shrink-0 text-primary" />
                 <p className="text-xs text-muted-foreground">
                   Approval gates for critical steps
                 </p>
               </div>
-              <div className="flex items-start gap-2 rounded-lg bg-background p-3">
+              <div className="flex items-start gap-2 border border-border bg-background p-3">
                 <Check className="size-4 mt-0.5 shrink-0 text-primary" />
                 <p className="text-xs text-muted-foreground">
                   Automated background jobs
                 </p>
               </div>
-              <div className="flex items-start gap-2 rounded-lg bg-background p-3">
+              <div className="flex items-start gap-2 border border-border bg-background p-3">
                 <Check className="size-4 mt-0.5 shrink-0 text-primary" />
                 <p className="text-xs text-muted-foreground">
                   Full audit trail on every transition
@@ -409,42 +386,27 @@ export default function TemplatesPage() {
           </div>
         </EmptyState>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="divide-y divide-border border-t border-border">
           {templates.map((t) => (
-            <button
+            <div
               key={t.id}
-              type="button"
-              onClick={() => startEdit(t)}
-              className="group flex flex-col items-start gap-3 rounded-xl border bg-card p-5 text-left shadow-xs transition-all hover:shadow-md hover:border-primary/20"
+              className="flex items-center justify-between py-3"
             >
-              <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
-                <Settings2 className="size-4.5" />
-              </div>
-              <div>
-                <p className="text-sm font-medium">{t.name}</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">
+              <div className="flex items-center gap-4">
+                <span className="text-sm font-medium text-foreground">{t.name}</span>
+                <span className="text-xs text-muted-foreground font-[family-name:var(--font-ibm-plex-mono)]">
                   {t.stages.length} stage{t.stages.length !== 1 ? "s" : ""}
-                </p>
+                </span>
               </div>
-              {/* Mini pipeline preview */}
-              <div className="flex items-center gap-1 w-full">
-                {t.stages.slice(0, 4).map((s, i) => (
-                  <div key={i} className="flex items-center gap-1">
-                    <span className="rounded-md bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground truncate max-w-[100px]">
-                      {s.name || `Stage ${i + 1}`}
-                    </span>
-                    {i < Math.min(t.stages.length, 4) - 1 && (
-                      <span className="text-[10px] text-muted-foreground/40">&rarr;</span>
-                    )}
-                  </div>
-                ))}
-                {t.stages.length > 4 && (
-                  <span className="text-[11px] text-muted-foreground">
-                    +{t.stages.length - 4}
-                  </span>
-                )}
-              </div>
-            </button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => startEdit(t)}
+                className="gap-1.5 text-xs"
+              >
+                Edit
+              </Button>
+            </div>
           ))}
         </div>
       )}

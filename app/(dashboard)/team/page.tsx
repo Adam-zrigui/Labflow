@@ -152,7 +152,7 @@ export default function TeamPage() {
     return (
       <div className="flex flex-col gap-6 p-6 lg:p-8">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Team</h1>
+          <h1 className="text-xl font-semibold tracking-tight font-[family-name:var(--font-space-grotesk)]">Team</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
             Manage your team members and roles
           </p>
@@ -166,12 +166,12 @@ export default function TeamPage() {
     return (
       <div className="flex flex-col gap-6 p-6 lg:p-8">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Team</h1>
+          <h1 className="text-xl font-semibold tracking-tight font-[family-name:var(--font-space-grotesk)]">Team</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
             Manage your team members and roles
           </p>
         </div>
-        <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed bg-card p-12 text-center">
+        <div className="flex flex-col items-center gap-4 border border-border border-dashed bg-card p-12 text-center">
           <div className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
             <Shield className="size-6" />
           </div>
@@ -192,7 +192,7 @@ export default function TeamPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Team</h1>
+          <h1 className="text-xl font-semibold tracking-tight font-[family-name:var(--font-space-grotesk)]">Team</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
             Manage your team members and roles
           </p>
@@ -217,17 +217,17 @@ export default function TeamPage() {
           }
         />
       ) : (
-        <div className="overflow-x-auto rounded-xl border bg-card shadow-xs">
+        <div className="overflow-x-auto border border-border bg-card">
           <table className="min-w-full text-sm">
             <thead>
               <tr className="border-b bg-muted/30">
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground font-[family-name:var(--font-space-grotesk)]">
                   Member
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground font-[family-name:var(--font-space-grotesk)]">
                   Role
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                <th className="px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground font-[family-name:var(--font-space-grotesk)]">
                   Joined
                 </th>
                 <th className="px-4 py-3" />
@@ -280,7 +280,7 @@ export default function TeamPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="mx-4 w-full max-w-md rounded-2xl border bg-card p-6 shadow-lg">
             <div className="flex items-start gap-3">
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <div className="flex size-10 shrink-0 items-center justify-center border border-primary/20 bg-primary/10 text-primary">
                 <UserPlus className="size-5" />
               </div>
               <div>
@@ -293,7 +293,7 @@ export default function TeamPage() {
 
             {inviteResult ? (
               <div className="mt-5 space-y-4">
-                <div className="rounded-lg border border-green-200 bg-green-50 px-3.5 py-3 dark:border-green-800/50 dark:bg-green-950/50">
+                <div className="border border-border border-green-200 bg-green-50 px-3.5 py-3 dark:border-green-800/50 dark:bg-green-950/50">
                   <p className="text-sm font-medium text-green-800 dark:text-green-300 flex items-center gap-2">
                     <CheckCircle2 className="size-4 shrink-0" />
                     Invite created for {inviteResult.invite.email}
@@ -381,7 +381,7 @@ export default function TeamPage() {
                 </div>
 
                 {inviteError && (
-                  <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive">
+                  <div className="border border-border border-destructive/20 bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive">
                     {inviteError}
                   </div>
                 )}
@@ -425,7 +425,7 @@ export default function TeamPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="mx-4 w-full max-w-md rounded-2xl border bg-card p-6 shadow-lg">
             <div className="flex items-start gap-3">
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-600 dark:bg-amber-900/50 dark:text-amber-400">
+              <div className="flex size-10 shrink-0 items-center justify-center border border-amber-600/20 bg-amber-100 text-amber-600 dark:border-amber-400/20 dark:bg-amber-900/50 dark:text-amber-400">
                 <AlertTriangle className="size-5" />
               </div>
               <div>
@@ -445,7 +445,7 @@ export default function TeamPage() {
             </div>
 
             {promoteError && (
-              <div className="mt-3 rounded-lg border border-destructive/20 bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive">
+              <div className="mt-3 border border-border border-destructive/20 bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive">
                 {promoteError}
               </div>
             )}

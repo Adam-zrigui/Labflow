@@ -9,18 +9,17 @@ interface TimelineEntryProps {
   muted?: boolean;
 }
 
-const dotColors: Record<string, string> = {
-  blue: "bg-blue-500",
-  green: "bg-green-500",
-  amber: "bg-amber-500",
-  gray: "bg-muted-foreground/30",
+const sealColors: Record<string, string> = {
+  blue: "border-primary bg-primary/10 text-primary",
+  green: "border-green-600 bg-green-50 text-green-700 dark:border-green-500 dark:bg-green-950/50 dark:text-green-400",
+  amber: "border-amber-600 bg-amber-50 text-amber-700 dark:border-amber-500 dark:bg-amber-950/50 dark:text-amber-400",
+  gray: "border-border bg-muted text-muted-foreground",
 };
 
-const lineColors: Record<string, string> = {
-  blue: "bg-blue-200 dark:bg-blue-900",
-  green: "bg-green-200 dark:bg-green-900",
-  amber: "bg-amber-200 dark:bg-amber-900",
-  gray: "bg-border",
+const outcomeStamp: Record<string, { label: string; cls: string }> = {
+  flagged: { label: "FLAGGED", cls: "text-amber-600 border-amber-600 dark:text-amber-400 dark:border-amber-500" },
+  pass: { label: "PASSED", cls: "text-green-700 border-green-600 dark:text-green-400 dark:border-green-500" },
+  entered: { label: "ENTERED", cls: "text-primary border-primary" },
 };
 
 function TimelineEntry({
@@ -32,46 +31,50 @@ function TimelineEntry({
   muted,
 }: TimelineEntryProps) {
   const isStage = type === "stage";
-  const dotColor = muted ? "bg-muted-foreground/30" : (dotColors[color] ?? dotColors.gray);
-  const lineColor = muted ? "bg-border" : (lineColors[color] ?? lineColors.gray);
+  const sealColor = muted
+    ? "border-border bg-muted text-muted-foreground"
+    : (sealColors[color] ?? sealColors.gray);
 
   return (
-    <div className="relative flex gap-4 pb-5 last:pb-0">
-      {/* Vertical line + dot */}
+    <div className="relative flex gap-4 pb-6 last:pb-0">
+      {/* Vertical connecting line + seal */}
       <div className="flex flex-col items-center">
         <div
           className={cn(
-            "z-10 size-3 shrink-0 rounded-full ring-2 ring-background",
-            dotColor
+            "z-10 flex size-6 shrink-0 items-center justify-center rounded-full border-2",
+            sealColor
           )}
-        />
-        <div className={cn("mt-1 w-px flex-1", lineColor)} />
+        >
+          <div className="size-1.5 rounded-full bg-current" />
+        </div>
+        <div className="custody-line" />
       </div>
 
       {/* Content */}
-      <div className={cn("flex-1 min-w-0 pt-px", muted && "opacity-60")}>
+      <div className={cn("flex-1 min-w-0 pt-0.5", muted && "opacity-50")}>
         <div className="flex items-baseline justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <p
-              className={cn(
-                isStage
-                  ? "text-sm font-medium text-foreground"
-                  : "text-xs text-muted-foreground"
-              )}
-            >
-              {description}
-            </p>
-            {!isStage && (
-              <span className="shrink-0 rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground leading-none">
-                Audit
-              </span>
+          <p
+            className={cn(
+              "text-sm",
+              isStage
+                ? "font-medium text-foreground"
+                : "font-mono text-xs text-muted-foreground"
             )}
-          </div>
-          <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
+          >
+            {description}
+          </p>
+          <span className="shrink-0 font-mono text-[11px] text-muted-foreground tabular-nums">
             {timestamp}
           </span>
         </div>
-        <p className="mt-0.5 text-xs text-muted-foreground">{actor}</p>
+        <div className="mt-1 flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">{actor}</span>
+          {!isStage && (
+            <span className="stamp-badge text-muted-foreground">
+              Audit
+            </span>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -19,10 +19,10 @@ function ProgressBar({ value, max, label }: ProgressBarProps) {
           {pct}%
         </span>
       </div>
-      <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+      <div className="h-1 w-full overflow-hidden bg-muted">
         <div
           className={cn(
-            "h-full rounded-full transition-all duration-500 ease-out",
+            "h-full transition-all duration-500 ease-out",
             isAtLimit
               ? "bg-destructive"
               : isNearLimit

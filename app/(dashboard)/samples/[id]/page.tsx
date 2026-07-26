@@ -5,7 +5,6 @@ import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton, SkeletonTimeline } from "@/components/ui/skeleton";
-import { Timeline, TimelineEntry } from "@/components/ui/timeline";
 import { EmptyState, NotFoundIllustration } from "@/components/empty-state";
 import {
   ArrowLeft,
@@ -97,13 +96,13 @@ function SampleSkeleton() {
         <div className="space-y-2">
           <div className="flex items-center gap-3">
             <Skeleton className="h-7 w-28" />
-            <Skeleton className="h-5 w-20 rounded-full" />
+            <Skeleton className="h-5 w-20" />
           </div>
           <Skeleton className="h-4 w-40" />
         </div>
-        <Skeleton className="h-9 w-32 rounded-lg" />
+        <Skeleton className="h-9 w-32" />
       </div>
-      <div className="rounded-xl border bg-card p-5 shadow-xs">
+      <div className="border border-border bg-card p-5">
         <Skeleton className="h-3 w-36 mb-4" />
         <div className="flex items-center gap-3">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -114,7 +113,7 @@ function SampleSkeleton() {
           ))}
         </div>
       </div>
-      <div className="rounded-xl border bg-card p-5 shadow-xs">
+      <div className="border border-border bg-card p-5">
         <Skeleton className="h-3 w-20 mb-4" />
         <SkeletonTimeline entries={3} />
       </div>
@@ -235,7 +234,6 @@ export default function SampleDetailPage() {
     );
   }
 
-  const currentStage = sample.template.stages[sample.currentStageIndex];
   const sb = statusBadge[sample.status] ?? {
     label: sample.status,
     variant: "inProgress" as const,
@@ -248,32 +246,65 @@ export default function SampleDetailPage() {
   const isLastStage =
     sample.currentStageIndex >= sample.template.stages.length - 1;
   const totalStages = sample.template.stages.length;
-  const progressPct = totalStages > 0
-    ? Math.round(((sample.currentStageIndex + (isLastStage ? 1 : 0)) / totalStages) * 100)
-    : 0;
 
   return (
-    <div className="flex flex-col gap-6 p-6 lg:p-8">
-      {/* Back link */}
+    <div className="flex flex-col gap-5 p-6 lg:p-8">
+      {/* 1. Back link */}
       <Link
         href="/samples"
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft className="size-3.5" />
-        Samples
+        Back to samples
       </Link>
+
+      {/* 2. Specimen chip + Status badge */}
+      <div className="flex items-center gap-3">
+        <span className="specimen-chip text-base px-3 py-1">
+          {sampleId(sample.id)}
+        </span>
+        <Badge variant={sb.variant} className="gap-1">
+          {sb.icon}
+          {sb.label}
+        </Badge>
+      </div>
+
+      {/* 3. Template name + "Stage X of Y" */}
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-baseline gap-3">
+          <span className="text-sm font-medium text-foreground">
+            {sample.template.name}
+          </span>
+          <span className="text-xs text-muted-foreground font-mono">
+            Stage {sample.currentStageIndex + 1} of {totalStages}
+          </span>
+        </div>
+        {!isLastStage && !isFlagged && (
+          <Button onClick={handleAdvance} disabled={advancing} className="gap-1.5">
+            {advancing ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <CheckCircle2 className="size-4" />
+            )}
+            {advancing ? "Advancing\u2026" : "Advance stage"}
+          </Button>
+        )}
+      </div>
+
+      {/* 4. Hairline separator */}
+      <div className="border-t border-border" />
 
       {/* Error banner */}
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-800/50 dark:bg-red-950/50 dark:text-red-300">
+        <div className="border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-700 dark:bg-red-950/50 dark:text-red-300">
           {error}
         </div>
       )}
 
-      {/* Flag banner */}
+      {/* 5. Flag banner (only when flagged) */}
       {isFlagged && (
-        <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3.5 dark:border-amber-800/50 dark:bg-amber-950/50">
-          <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-600 dark:bg-amber-900/50 dark:text-amber-400">
+        <div className="flex items-start gap-3 border border-amber-300 bg-amber-50 px-4 py-3.5 dark:border-amber-700 dark:bg-amber-950/50">
+          <div className="flex size-8 shrink-0 items-center justify-center border border-amber-300 bg-amber-100 text-amber-600 dark:border-amber-600 dark:bg-amber-900/50 dark:text-amber-400">
             <AlertTriangle className="size-4" />
           </div>
           <div className="flex-1">
@@ -291,205 +322,111 @@ export default function SampleDetailPage() {
               size="sm"
               variant="outline"
               disabled
-              className="border-amber-300 text-amber-800/50 dark:border-amber-700 dark:text-amber-300/50"
+              className="border-amber-400 text-amber-800/50 dark:border-amber-600 dark:text-amber-300/50"
             >
               Approve
             </Button>
-            <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:block whitespace-nowrap rounded-lg bg-foreground px-2.5 py-1 text-xs text-background shadow-lg">
+            <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:block whitespace-nowrap bg-foreground px-2.5 py-1 text-xs text-background shadow-lg">
               Requires SeniorScientist role
             </div>
           </div>
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-xl font-semibold tracking-tight">
-              {sampleId(sample.id)}
-            </h1>
-            <Badge variant={sb.variant} className="gap-1">
-              {sb.icon}
-              {sb.label}
-            </Badge>
-          </div>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {sample.template.name}
-          </p>
-        </div>
-        {!isLastStage && !isFlagged && (
-          <Button onClick={handleAdvance} disabled={advancing} className="gap-1.5">
-            {advancing ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <CheckCircle2 className="size-4" />
-            )}
-            {advancing ? "Advancing\u2026" : "Advance stage"}
-          </Button>
-        )}
-      </div>
+      {/* 6. Hairline separator (only when flagged) */}
+      {isFlagged && <div className="border-t border-border" />}
 
-      {/* Stage progress stepper */}
-      <div className="rounded-xl border bg-card p-5 shadow-xs">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            Workflow progress
-          </h2>
-          <span className="text-xs font-medium text-primary">{progressPct}%</span>
-        </div>
-
-        {/* Progress bar */}
-        <div className="mb-5 h-1.5 w-full overflow-hidden rounded-full bg-muted">
-          <div
-            className="h-full rounded-full bg-primary transition-all duration-500 ease-out"
-            style={{ width: `${progressPct}%` }}
-          />
-        </div>
-
-        {/* Stage dots */}
-        <div className="flex items-start gap-0 overflow-x-auto pb-1">
-          {sample.template.stages.map((stage, idx) => {
-            const isCompleted = idx < sample.currentStageIndex;
-            const isCurrent = idx === sample.currentStageIndex;
-            const isLast = idx === sample.template.stages.length - 1;
-
-            return (
-              <div key={idx} className="flex items-start">
-                <div className="flex flex-col items-center min-w-[72px]">
-                  {/* Dot */}
-                  <div
-                    className={`flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold transition-all ${
-                      isCompleted
-                        ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20"
-                        : isCurrent
-                          ? "bg-primary/10 text-primary ring-2 ring-primary/30"
-                          : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {isCompleted ? (
-                      <CheckCircle2 className="size-4" />
-                    ) : isCurrent ? (
-                      <Loader2 className="size-4 animate-spin" />
-                    ) : (
-                      idx + 1
-                    )}
-                  </div>
-                  {/* Label */}
-                  <span
-                    className={`mt-2 text-center text-[11px] font-medium leading-tight ${
-                      isCurrent
-                        ? "text-foreground"
-                        : isCompleted
-                          ? "text-primary"
-                          : "text-muted-foreground"
-                    }`}
-                  >
-                    {stage.name}
-                  </span>
-                </div>
-                {/* Connector line */}
-                {!isLast && (
-                  <div className="flex items-center pt-3.5 px-0.5">
-                    <div
-                      className={`h-0.5 w-8 rounded-full ${
-                        isCompleted ? "bg-primary" : "bg-muted"
-                      }`}
-                    />
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-        {currentStage?.isApprovalGate && (
-          <p className="mt-4 text-xs text-muted-foreground border-t pt-3">
-            Requires {currentStage.requiredRole} approval to proceed
-          </p>
-        )}
-      </div>
-
-      {/* Timeline */}
-      <div className="rounded-xl border bg-card p-5 shadow-xs">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            Timeline
-          </h2>
-        </div>
+      {/* 7–9. Timeline (vertical line left, seals, no stepper) */}
+      <div className="relative">
         {sample.history.length === 0 ? (
           <p className="text-sm text-muted-foreground py-4 text-center">
             No history entries yet. Advance the sample to see activity here.
           </p>
         ) : (
-          <Timeline>
-            {sample.history.map((h) => {
-              const stage = sample.template.stages[h.stageIndex];
-              const color =
-                h.outcome === "flagged"
-                  ? "amber"
-                  : h.outcome === "pass"
-                    ? "green"
-                    : "blue";
-              return (
-                <TimelineEntry
-                  key={h.id}
-                  type="stage"
-                  color={color}
-                  timestamp={formatTime(h.enteredAt)}
-                  actor={
-                    h.actorId === "instrument-webhook"
-                      ? "Instrument"
-                      : h.actorId === "you"
-                        ? "You"
-                        : `User ${h.actorId.slice(0, 8)}`
-                  }
-                  description={
-                    h.outcome === "flagged"
-                      ? `${stage?.name ?? `Stage ${h.stageIndex + 1}`} flagged`
-                      : h.outcome === "pass"
-                        ? `${stage?.name ?? `Stage ${h.stageIndex + 1}`} completed`
-                        : `Entered ${stage?.name ?? `stage ${h.stageIndex + 1}`}`
-                  }
-                />
-              );
-            })}
-          </Timeline>
-        )}
+          <div className="relative ml-3">
+            {/* Vertical line left */}
+            <div className="absolute left-0 top-0 bottom-0 w-px bg-border" />
 
-        {/* Audit log toggle */}
-        {sample.auditLogs.length > 0 && (
-          <div className="mt-4 border-t pt-4">
-            <button
-              type="button"
-              onClick={() => setShowAudit(!showAudit)}
-              className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded"
-            >
-              {showAudit ? (
-                <EyeOff className="size-3.5" />
-              ) : (
-                <Eye className="size-3.5" />
-              )}
-              {showAudit ? "Hide" : "Show"} full audit log
-            </button>
-            {showAudit && (
-              <div className="mt-3">
-                <Timeline>
-                  {sample.auditLogs.map((log) => (
-                    <TimelineEntry
-                      key={log.id}
-                      type="audit"
-                      muted
-                      timestamp={formatTime(log.timestamp)}
-                      actor={`User ${log.actorId.slice(0, 8)}`}
-                      description={log.action.replace(/_/g, " ")}
-                    />
-                  ))}
-                </Timeline>
-              </div>
-            )}
+            <div className="flex flex-col">
+              {sample.history.map((h, idx) => {
+                const stage = sample.template.stages[h.stageIndex];
+                const isCompleted = h.exitedAt !== null;
+
+                return (
+                  <div key={h.id} className="relative flex gap-4 pb-6 last:pb-0">
+                    {/* Seal (filled = completed/past, outline = current) */}
+                    <div className="relative z-10 -ml-3 flex size-6 shrink-0 items-center justify-center">
+                      {isCompleted ? (
+                        <span className="flex size-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-semibold">
+                          ●
+                        </span>
+                      ) : (
+                        <span className="flex size-6 items-center justify-center rounded-full border-2 border-primary bg-background text-[10px] font-semibold text-primary">
+                          ○
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Content */}
+                    <div className="min-w-0 flex-1 pt-0.5">
+                      <p className="text-[11px] font-medium text-muted-foreground font-mono leading-none mb-1">
+                        {formatTime(h.enteredAt)}
+                        <span className="mx-1.5 text-border">·</span>
+                        {h.actorId === "instrument-webhook"
+                          ? "Instrument"
+                          : h.actorId === "you"
+                            ? "You"
+                            : `User ${h.actorId.slice(0, 8)}`}
+                      </p>
+                      <p className="text-sm text-foreground leading-snug">
+                        {h.outcome === "flagged"
+                          ? `${stage?.name ?? `Stage ${h.stageIndex + 1}`} flagged`
+                          : h.outcome === "pass"
+                            ? `${stage?.name ?? `Stage ${h.stageIndex + 1}`} completed`
+                            : `Entered ${stage?.name ?? `stage ${h.stageIndex + 1}`}`}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>
+
+      {/* 9. Audit log — collapsed by default */}
+      {sample.auditLogs.length > 0 && (
+        <div className="border-t border-border pt-4">
+          <button
+            type="button"
+            onClick={() => setShowAudit(!showAudit)}
+            className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded"
+          >
+            {showAudit ? (
+              <EyeOff className="size-3.5" />
+            ) : (
+              <Eye className="size-3.5" />
+            )}
+            {showAudit ? "Hide" : "Show"} full audit log
+          </button>
+          {showAudit && (
+            <div className="mt-3 pl-3 border-l-2 border-border/50">
+              {sample.auditLogs.map((log) => (
+                <div key={log.id} className="py-2 last:py-0">
+                  <p className="text-[11px] font-medium text-muted-foreground font-mono leading-none mb-0.5">
+                    {formatTime(log.timestamp)}
+                    <span className="mx-1.5 text-border">·</span>
+                    User {log.actorId.slice(0, 8)}
+                  </p>
+                  <p className="text-xs text-foreground/80 font-mono">
+                    {log.action.replace(/_/g, " ")}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
