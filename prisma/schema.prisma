@@ -1,0 +1,99 @@
+// schema.prisma
+datasource db {
+  provider = "postgresql"
+
+}
+model Tenant {
+  id                 String    @id @default(uuid())
+  name               String
+  stripeCustomerId   String?   @unique
+  planId             String?
+  subscriptionStatus String    @default("trialing")
+  createdAt          DateTime  @default(now())
+
+  plan      Plan?               @relation(fields: [planId], references: [id])
+  users     User[]
+  samples   Sample[]
+  templates WorkflowTemplate[]
+  usage     UsageCounter[]
+}
+
+model User {
+  id       String @id @default(uuid())
+  tenantId String
+  email    String @unique
+  role     String // "Admin" | "Technician" | "SeniorScientist"
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+}
+
+model Plan {
+  id                   String  @id @default(uuid())
+  name                 String
+  stripePriceId        String  @unique
+  maxSamplesPerMonth   Int
+  maxWorkflowTemplates Int
+  maxUsers             Int
+  hasInstrumentWebhook Boolean @default(false)
+
+  tenants Tenant[]
+}
+
+model WorkflowTemplate {
+  id       String @id @default(uuid())
+  tenantId String
+  name     String
+  stages   Json   // [{ name, requiredRole, requiredFields, isApprovalGate }]
+
+  tenant  Tenant   @relation(fields: [tenantId], references: [id])
+  samples Sample[]
+}
+
+model Sample {
+  id                 String   @id @default(uuid())
+  tenantId           String
+  workflowTemplateId String
+  currentStageIndex  Int      @default(0)
+  status             String   @default("in_progress") // in_progress | flagged | completed
+  metadata           Json?
+  createdAt          DateTime @default(now())
+
+  tenant       Tenant             @relation(fields: [tenantId], references: [id])
+  template     WorkflowTemplate   @relation(fields: [workflowTemplateId], references: [id])
+  history      SampleStageHistory[]
+}
+
+model SampleStageHistory {
+  id         String    @id @default(uuid())
+  sampleId   String
+  stageIndex Int
+  enteredAt  DateTime  @default(now())
+  exitedAt   DateTime?
+  actorId    String
+  outcome    String?   // "pass" | "flagged" | null while in progress
+
+  sample Sample @relation(fields: [sampleId], references: [id])
+}
+
+// Append-only. Never updated or deleted from application code.
+model AuditLog {
+  id         String   @id @default(uuid())
+  entityType String   // "Sample" | "WorkflowTemplate" | etc.
+  entityId   String
+  actorId    String
+  action     String   // "created" | "stage_advanced" | "flagged" | "approved"
+  before     Json?
+  after      Json?
+  timestamp  DateTime @default(now())
+}
+
+model UsageCounter {
+  id          String   @id @default(uuid())
+  tenantId    String
+  periodStart DateTime
+  sampleCount Int      @default(0)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, periodStart])
+}
