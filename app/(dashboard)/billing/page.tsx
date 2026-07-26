@@ -20,6 +20,7 @@ import {
   Zap,
   Check,
   X,
+  Crown,
 } from "lucide-react";
 
 interface Plan {
@@ -52,6 +53,94 @@ function formatLimit(n: number): string {
   if (n >= 999999) return "Unlimited";
   if (n >= 999) return "Unlimited";
   return n.toLocaleString();
+}
+
+const PLAN_ORDER = ["starter", "pro", "enterprise"] as const;
+
+function TierTracker({
+  currentPlanId,
+  subscriptionStatus,
+}: {
+  currentPlanId: string | null;
+  subscriptionStatus: string;
+}) {
+  const currentIndex = PLAN_ORDER.indexOf(
+    currentPlanId as (typeof PLAN_ORDER)[number]
+  );
+
+  return (
+    <div className="rounded-xl border bg-card shadow-xs px-6 py-5">
+      <p className="mb-4 text-sm font-medium text-muted-foreground">
+        Active tier
+      </p>
+      <div className="flex items-center">
+        {PLAN_ORDER.map((id, i) => {
+          const isCurrent = i === currentIndex;
+          const isPast = currentIndex >= 0 && i < currentIndex;
+          const isFuture = currentIndex >= 0 && i > currentIndex;
+
+          return (
+            <div key={id} className="flex flex-1 items-center">
+              <div className="flex flex-col items-center">
+                <div
+                  className={`flex size-9 items-center justify-center rounded-full border-2 text-xs font-semibold transition-colors ${
+                    isCurrent
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : isPast
+                        ? "border-primary/40 bg-primary/10 text-primary"
+                        : "border-muted-foreground/20 bg-muted text-muted-foreground/50"
+                  }`}
+                >
+                  {isPast ? (
+                    <Check className="size-4" />
+                  ) : isCurrent ? (
+                    <Crown className="size-4" />
+                  ) : (
+                    i + 1
+                  )}
+                </div>
+                <span
+                  className={`mt-1.5 text-xs font-medium capitalize ${
+                    isCurrent
+                      ? "text-foreground"
+                      : isPast
+                        ? "text-primary/70"
+                        : "text-muted-foreground/40"
+                  }`}
+                >
+                  {id}
+                </span>
+                {isCurrent && (
+                  <span
+                    className={`mt-0.5 text-[10px] font-medium ${
+                      subscriptionStatus === "active"
+                        ? "text-green-600 dark:text-green-400"
+                        : subscriptionStatus === "past_due"
+                          ? "text-amber-600 dark:text-amber-400"
+                          : "text-muted-foreground/60"
+                    }`}
+                  >
+                    {subscriptionStatus === "active"
+                      ? "Active"
+                      : subscriptionStatus === "past_due"
+                        ? "Past due"
+                        : subscriptionStatus}
+                  </span>
+                )}
+              </div>
+              {i < PLAN_ORDER.length - 1 && (
+                <div
+                  className={`mx-2 mb-6 h-0.5 flex-1 rounded-full ${
+                    isPast ? "bg-primary/40" : "bg-muted-foreground/15"
+                  }`}
+                />
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 function BillingSkeleton() {
@@ -168,7 +257,8 @@ export default function BillingPage() {
   if (loading) return <BillingSkeleton />;
 
   // No subscription — show plan picker
-  if (!data || !data.planName) {
+  const hasSubscription = data?.planId || data?.subscriptionStatus === "active";
+  if (!data || !hasSubscription) {
     return (
       <div className="flex flex-col gap-6 p-6 lg:p-8">
         <div>
@@ -183,6 +273,14 @@ export default function BillingPage() {
             <AlertTriangle className="size-4 shrink-0" />
             {error}
           </div>
+        )}
+
+        {/* Tier tracker — show even on plan picker if a plan is assigned */}
+        {data?.planId && (
+          <TierTracker
+            currentPlanId={data.planId}
+            subscriptionStatus={data.subscriptionStatus}
+          />
         )}
 
         {plans.length > 0 ? (
@@ -383,7 +481,7 @@ export default function BillingPage() {
                 <p className="text-sm font-medium text-muted-foreground">
                   Current plan
                 </p>
-                <p className="text-lg font-semibold">{data.planName}</p>
+                <p className="text-lg font-semibold">{data.planName ?? "Unknown plan"}</p>
               </div>
             </div>
             <Badge variant={badge.variant}>{badge.label}</Badge>
@@ -430,6 +528,12 @@ export default function BillingPage() {
           </Button>
         </div>
       </div>
+
+      {/* Tier tracker */}
+      <TierTracker
+        currentPlanId={data.planId}
+        subscriptionStatus={data.subscriptionStatus}
+      />
 
       {/* Past-due warning */}
       {data.subscriptionStatus === "past_due" && (

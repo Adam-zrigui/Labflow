@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,6 +13,7 @@ import {
 } from "firebase/auth";
 import { auth } from "@/lib/firebase-client";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import {
   Trash2,
@@ -19,7 +21,19 @@ import {
   KeyRound,
   CheckCircle2,
   Shield,
+  User,
+  Bell,
+  CreditCard,
+  Users,
+  Crown,
 } from "lucide-react";
+
+interface UserProfile {
+  id: string;
+  email: string;
+  role: string;
+  notifyOnFlag: boolean;
+}
 
 const passwordSchema = z
   .object({
@@ -37,16 +51,31 @@ const passwordSchema = z
 
 type PasswordFormData = z.infer<typeof passwordSchema>;
 
+const roleBadge: Record<string, { label: string; variant: "completed" | "inProgress" | "default" }> = {
+  Admin: { label: "Admin", variant: "completed" },
+  SeniorScientist: { label: "Senior Scientist", variant: "inProgress" },
+  Technician: { label: "Technician", variant: "default" },
+};
+
 export default function SettingsPage() {
   const router = useRouter();
 
-  // Delete account state
+  // Profile
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
+
+  // Notification preferences
+  const [notifyOnFlag, setNotifyOnFlag] = useState(false);
+  const [notifyLoading, setNotifyLoading] = useState(false);
+  const [notifySuccess, setNotifySuccess] = useState(false);
+
+  // Delete account
   const [showConfirm, setShowConfirm] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
 
-  // Change password state
+  // Change password
   const [pwSuccess, setPwSuccess] = useState(false);
   const [pwError, setPwError] = useState<string | null>(null);
   const [pwLoading, setPwLoading] = useState(false);
@@ -60,6 +89,46 @@ export default function SettingsPage() {
     resolver: zodResolver(passwordSchema),
     defaultValues: { currentPassword: "", newPassword: "", confirmPassword: "" },
   });
+
+  const fetchProfile = useCallback(async () => {
+    try {
+      const res = await fetch("/api/account/profile");
+      if (res.ok) {
+        const data = await res.json();
+        setProfile(data);
+        setNotifyOnFlag(data.notifyOnFlag);
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setProfileLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchProfile();
+  }, [fetchProfile]);
+
+  const handleNotifyToggle = async (value: boolean) => {
+    setNotifyLoading(true);
+    setNotifySuccess(false);
+    try {
+      const res = await fetch("/api/account/notification-preferences", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notifyOnFlag: value }),
+      });
+      if (res.ok) {
+        setNotifyOnFlag(value);
+        setNotifySuccess(true);
+        setTimeout(() => setNotifySuccess(false), 3000);
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setNotifyLoading(false);
+    }
+  };
 
   const onPasswordSubmit = async (data: PasswordFormData) => {
     setPwError(null);
@@ -122,6 +191,10 @@ export default function SettingsPage() {
     }
   };
 
+  const isAdmin = profile?.role === "Admin";
+  const isReviewer = profile?.role === "Admin" || profile?.role === "SeniorScientist";
+  const rb = profile ? roleBadge[profile.role] ?? { label: profile.role, variant: "default" as const } : null;
+
   return (
     <div className="flex flex-col gap-6 p-6 lg:p-8">
       <div>
@@ -130,6 +203,111 @@ export default function SettingsPage() {
           Manage your account
         </p>
       </div>
+
+      {/* Profile section */}
+      <div className="rounded-xl border bg-card p-6 shadow-xs">
+        <div className="flex items-start gap-4">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <User className="size-5" />
+          </div>
+          <div className="flex-1">
+            <h2 className="text-base font-semibold text-foreground">
+              Profile
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
+              Your account information. Email and role are managed by your
+              workspace administrator.
+            </p>
+
+            {profileLoading ? (
+              <div className="mt-4 space-y-3">
+                <div className="h-4 w-48 rounded bg-muted" />
+                <div className="h-4 w-32 rounded bg-muted" />
+                <div className="h-4 w-24 rounded bg-muted" />
+              </div>
+            ) : profile ? (
+              <div className="mt-4 space-y-3 max-w-sm">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                    Email
+                  </label>
+                  <p className="text-sm font-medium">{profile.email}</p>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                    Role
+                  </label>
+                  <Badge variant={rb!.variant} className="gap-1">
+                    {profile.role === "Admin" && <Crown className="size-3" />}
+                    {rb!.label}
+                  </Badge>
+                </div>
+              </div>
+            ) : null}
+
+            {isAdmin && (
+              <div className="mt-4 rounded-lg border bg-muted/30 px-3.5 py-2.5 text-sm text-muted-foreground">
+                <span className="font-medium text-foreground">Admin:</span>{" "}
+                Manage team members on the{" "}
+                <Link href="/team" className="font-medium text-primary hover:text-primary/80 transition-colors">
+                  Team page
+                </Link>
+                {" "}or update billing on the{" "}
+                <Link href="/billing" className="font-medium text-primary hover:text-primary/80 transition-colors">
+                  Billing page
+                </Link>.
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Notification preferences */}
+      {isReviewer && (
+        <div className="rounded-xl border bg-card p-6 shadow-xs">
+          <div className="flex items-start gap-4">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400">
+              <Bell className="size-5" />
+            </div>
+            <div className="flex-1">
+              <h2 className="text-base font-semibold text-foreground">
+                Notification preferences
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
+                Choose which events trigger email notifications.
+              </p>
+
+              <div className="mt-4">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={notifyOnFlag}
+                    onChange={(e) => handleNotifyToggle(e.target.checked)}
+                    disabled={notifyLoading}
+                    className="size-4 rounded border-input"
+                  />
+                  <div>
+                    <span className="text-sm font-medium">
+                      Email me when a sample is flagged
+                    </span>
+                    <p className="text-xs text-muted-foreground">
+                      Receive an email whenever a sample in your workspace is
+                      flagged for review.
+                    </p>
+                  </div>
+                </label>
+
+                {notifySuccess && (
+                  <p className="mt-2 text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
+                    <CheckCircle2 className="size-3" />
+                    Preference saved.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Change password */}
       <div className="rounded-xl border bg-card p-6 shadow-xs">

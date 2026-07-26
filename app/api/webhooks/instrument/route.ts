@@ -3,6 +3,9 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { writeAuditLog } from "@/lib/audit";
 import { canUseInstrumentWebhook } from "@/lib/feature-gate";
+import { sendFlagNotifications } from "@/lib/notify-flag";
+import { checkRateLimit } from "@/lib/rate-limit";
+import * as Sentry from "@sentry/nextjs";
 
 const instrumentResultSchema = z.object({
   value: z.number(),
@@ -16,7 +19,16 @@ const instrumentWebhookSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  // Authenticate via shared secret header
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0] ?? "127.0.0.1";
+  const { success } = await checkRateLimit(`webhook:${ip}`);
+
+  if (!success) {
+    return NextResponse.json(
+      { error: "Too many attempts, please try again in a minute" },
+      { status: 429 }
+    );
+  }
+
   const secret = request.headers.get("x-instrument-secret");
   const expectedSecret = process.env.INSTRUMENT_WEBHOOK_SECRET;
 
@@ -41,50 +53,105 @@ export async function POST(request: NextRequest) {
 
   const { sampleId, result } = parsed.data;
 
-  // Look up sample and its tenant
-  const sample = await prisma.sample.findUnique({
-    where: { id: sampleId },
-    include: {
-      tenant: {
-        select: { planId: true },
+  try {
+    const sample = await prisma.sample.findUnique({
+      where: { id: sampleId },
+      include: {
+        tenant: {
+          select: { planId: true },
+        },
+        template: {
+          select: { stages: true },
+        },
       },
-      template: {
-        select: { stages: true },
-      },
-    },
-  });
+    });
 
-  if (!sample) {
-    return NextResponse.json({ error: "Sample not found" }, { status: 404 });
-  }
+    if (!sample) {
+      return NextResponse.json({ error: "Sample not found" }, { status: 404 });
+    }
 
-  // Feature gate: tenant's plan must support instrument webhooks
-  const hasWebhook = await canUseInstrumentWebhook(sample.tenantId);
-  if (!hasWebhook) {
-    return NextResponse.json(
-      { error: "Instrument webhooks not available on current plan" },
-      { status: 403 }
-    );
-  }
+    const hasWebhook = await canUseInstrumentWebhook(sample.tenantId);
+    if (!hasWebhook) {
+      return NextResponse.json(
+        { error: "Instrument webhooks not available on current plan" },
+        { status: 403 }
+      );
+    }
 
-  // Determine if result is in range (simplified: if referenceRange is present, check)
-  const inRange = result.referenceRange
-    ? isInRange(result.value, result.referenceRange)
-    : true;
+    const inRange = result.referenceRange
+      ? isInRange(result.value, result.referenceRange)
+      : true;
 
-  if (inRange) {
-    // Attach result to sample metadata, advance stage
-    const stages = sample.template.stages as Array<{
-      name: string;
-      requiredRole: string;
-    }>;
+    if (inRange) {
+      const stages = sample.template.stages as Array<{
+        name: string;
+        requiredRole: string;
+      }>;
 
-    const nextStageIndex = sample.currentStageIndex + 1;
-    const isLastStage = nextStageIndex >= stages.length - 1;
+      const nextStageIndex = sample.currentStageIndex + 1;
+      const isLastStage = nextStageIndex >= stages.length - 1;
 
-    await prisma.$transaction(async (tx) => {
-      // Close current stage history
-      const currentHistory = await tx.sampleStageHistory.findFirst({
+      await prisma.$transaction(async (tx) => {
+        const currentHistory = await tx.sampleStageHistory.findFirst({
+          where: {
+            sampleId,
+            stageIndex: sample.currentStageIndex,
+            exitedAt: null,
+          },
+        });
+
+        if (currentHistory) {
+          await tx.sampleStageHistory.update({
+            where: { id: currentHistory.id },
+            data: { exitedAt: new Date(), outcome: "pass" },
+          });
+        }
+
+        await tx.sampleStageHistory.create({
+          data: {
+            sampleId,
+            stageIndex: nextStageIndex,
+            actorId: "instrument-webhook",
+          },
+        });
+
+        await tx.sample.update({
+          where: { id: sampleId },
+          data: {
+            currentStageIndex: nextStageIndex,
+            status: isLastStage ? "completed" : "in_progress",
+            metadata: {
+              ...((sample.metadata as Record<string, unknown>) ?? {}),
+              instrumentResult: result,
+            },
+          },
+        });
+      });
+
+      await writeAuditLog(
+        "Sample",
+        sampleId,
+        "instrument-webhook",
+        "stage_advanced",
+        { inRange: true },
+        { result }
+      );
+
+      return NextResponse.json({ success: true });
+    } else {
+      await prisma.sample.update({
+        where: { id: sampleId },
+        data: {
+          status: "flagged",
+          metadata: {
+            ...((sample.metadata as Record<string, unknown>) ?? {}),
+            instrumentResult: result,
+            flagReason: `Result ${result.value} ${result.unit} is out of range`,
+          },
+        },
+      });
+
+      const currentHistory = await prisma.sampleStageHistory.findFirst({
         where: {
           sampleId,
           stageIndex: sample.currentStageIndex,
@@ -93,90 +160,34 @@ export async function POST(request: NextRequest) {
       });
 
       if (currentHistory) {
-        await tx.sampleStageHistory.update({
+        await prisma.sampleStageHistory.update({
           where: { id: currentHistory.id },
-          data: { exitedAt: new Date(), outcome: "pass" },
+          data: { exitedAt: new Date(), outcome: "flagged" },
         });
       }
 
-      // Open next stage
-      await tx.sampleStageHistory.create({
-        data: {
-          sampleId,
-          stageIndex: nextStageIndex,
-          actorId: "instrument-webhook",
-        },
-      });
-
-      // Update sample
-      await tx.sample.update({
-        where: { id: sampleId },
-        data: {
-          currentStageIndex: nextStageIndex,
-          status: isLastStage ? "completed" : "in_progress",
-          metadata: {
-            ...((sample.metadata as Record<string, unknown>) ?? {}),
-            instrumentResult: result,
-          },
-        },
-      });
-    });
-
-    await writeAuditLog(
-      "Sample",
-      sampleId,
-      "instrument-webhook",
-      "stage_advanced",
-      { inRange: true },
-      { result }
-    );
-
-    return NextResponse.json({ success: true });
-  } else {
-    // Out of range: flag the sample, do not advance
-    await prisma.sample.update({
-      where: { id: sampleId },
-      data: {
-        status: "flagged",
-        metadata: {
-          ...((sample.metadata as Record<string, unknown>) ?? {}),
-          instrumentResult: result,
-          flagReason: `Result ${result.value} ${result.unit} is out of range`,
-        },
-      },
-    });
-
-    // Close current stage with flagged outcome
-    const currentHistory = await prisma.sampleStageHistory.findFirst({
-      where: {
+      await writeAuditLog(
+        "Sample",
         sampleId,
-        stageIndex: sample.currentStageIndex,
-        exitedAt: null,
-      },
-    });
+        "instrument-webhook",
+        "flagged",
+        { inRange: false },
+        { result, reason: "Out of reference range" }
+      );
 
-    if (currentHistory) {
-      await prisma.sampleStageHistory.update({
-        where: { id: currentHistory.id },
-        data: { exitedAt: new Date(), outcome: "flagged" },
-      });
+      const templateName = (sample.template as { name?: string })?.name ?? "Unknown";
+      sendFlagNotifications(sample.tenantId, sampleId, templateName).catch(() => {});
+
+      return NextResponse.json({ success: true, flagged: true });
     }
-
-    await writeAuditLog(
-      "Sample",
-      sampleId,
-      "instrument-webhook",
-      "flagged",
-      { inRange: false },
-      { result, reason: "Out of reference range" }
-    );
-
-    return NextResponse.json({ success: true, flagged: true });
+  } catch (error) {
+    console.error("Instrument webhook error:", error);
+    Sentry.captureException(error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
 function isInRange(value: number, referenceRange: string): boolean {
-  // Parse ranges like "3.5-5.5" or "<10" or ">5"
   const trimmed = referenceRange.trim();
 
   if (trimmed.startsWith("<")) {
@@ -196,6 +207,5 @@ function isInRange(value: number, referenceRange: string): boolean {
     return value >= min && value <= max;
   }
 
-  // If we can't parse the range, assume in range
   return true;
 }

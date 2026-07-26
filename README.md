@@ -114,3 +114,60 @@ pnpm test -- --watch  # Watch mode
 ```
 
 Tests cover auth flows, API route protection, session management, Stripe webhooks, and RBAC enforcement.
+
+## Local Kubernetes Setup
+
+Run LabFlow on Minikube for local development and testing.
+
+### Prerequisites
+
+- [Minikube](https://minikube.sigs.k8s.io/docs/start/)
+- [kubectl](https://kubernetes.io/docs/tasks/tools/)
+- Docker
+
+### Steps
+
+```bash
+# 1. Start Minikube
+minikube start
+
+# 2. Build the Docker image inside Minikube's Docker daemon
+eval $(minikube docker-env)
+docker build -t labflow:latest .
+
+# 3. (Optional) Build Redis image
+docker build -t redis:7-alpine -f k8s/Dockerfile.redis .
+
+# 4. Create secrets from the template
+cp k8s/secret.yaml.example k8s/secret.yaml
+# Edit k8s/secret.yaml with your real values
+kubectl apply -f k8s/secret.yaml
+
+# 5. Deploy everything
+kubectl apply -f k8s/redis-deployment.yaml
+kubectl apply -f k8s/redis-service.yaml
+kubectl apply -f k8s/deployment.yaml
+kubectl apply -f k8s/service.yaml
+
+# 6. Verify
+kubectl get pods
+kubectl get svc
+
+# 7. Access the app
+kubectl port-forward svc/labflow 3000:80
+# Open http://localhost:3000
+
+# 8. Clean up
+kubectl delete -f k8s/
+minikube stop
+```
+
+### Kubernetes Manifests
+
+| File | Description |
+|------|-------------|
+| `k8s/deployment.yaml` | LabFlow app (2 replicas, health probes, resource limits) |
+| `k8s/service.yaml` | ClusterIP service (port 80 -> 3000) |
+| `k8s/secret.yaml.example` | Template for environment secrets (copy to `secret.yaml`) |
+| `k8s/redis-deployment.yaml` | Redis for BullMQ job queue |
+| `k8s/redis-service.yaml` | Redis ClusterIP service |

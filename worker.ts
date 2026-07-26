@@ -1,25 +1,20 @@
-/**
- * Standalone BullMQ worker for processing sequencing jobs.
- *
- * Run this separately from the Next.js server:
- *   npx tsx worker.ts
- *
- * This worker processes sequencing jobs enqueued by the sample advance route
- * when a stage is flagged as backgroundJob: true.
- */
+import "./sentry.server.config";
 import { startSequencingWorker } from "./lib/queue";
+import * as Sentry from "@sentry/nextjs";
 
-console.log("Starting LabFlow sequencing worker...");
 const worker = startSequencingWorker();
 
-process.on("SIGINT", () => {
-  console.log("Shutting down worker...");
-  worker.close();
+worker.on("failed", (job, err) => {
+  Sentry.captureException(err, { extra: { jobId: job?.id, data: job?.data } });
+});
+
+process.on("unhandledRejection", (err) => {
+  Sentry.captureException(err);
+});
+
+process.on("SIGTERM", async () => {
+  await worker.close();
   process.exit(0);
 });
 
-process.on("SIGTERM", () => {
-  console.log("Shutting down worker...");
-  worker.close();
-  process.exit(0);
-});
+console.log("BullMQ worker started — waiting for jobs...");

@@ -3,12 +3,40 @@ import { prisma } from "./prisma";
 import { performStageAdvance } from "./advance-sample";
 import type { Stage } from "./workflow-engine";
 
-const connection = {
-  host: process.env.REDIS_HOST ?? "localhost",
-  port: parseInt(process.env.REDIS_PORT ?? "6379", 10),
-};
+function buildRedisConnection() {
+  const url = process.env.REDIS_URL;
+  if (url) {
+    const parsed = new URL(url);
+    return {
+      host: parsed.hostname,
+      port: parseInt(parsed.port || "6379", 10),
+      password: parsed.password || undefined,
+      tls: parsed.protocol === "rediss:" ? {} : undefined,
+      maxRetriesPerRequest: null,
+    };
+  }
 
-export const sequencingQueue = new Queue("sequencing", { connection });
+  const upstashUrl = process.env.UPSTASH_REDIS_REST_URL;
+  if (upstashUrl) {
+    const parsed = new URL(upstashUrl);
+    return {
+      host: parsed.hostname,
+      port: 6380,
+      password: process.env.UPSTASH_REDIS_REST_TOKEN,
+      tls: {} as const,
+      maxRetriesPerRequest: null,
+    };
+  }
+
+  return {
+    host: process.env.REDIS_HOST ?? "localhost",
+    port: parseInt(process.env.REDIS_PORT ?? "6379", 10),
+    maxRetriesPerRequest: null,
+  };
+}
+
+export const redisConnection = buildRedisConnection();
+export const sequencingQueue = new Queue("sequencing", { connection: redisConnection });
 
 export async function enqueueSequencingJob(sampleId: string) {
   await sequencingQueue.add(
@@ -24,9 +52,6 @@ export async function enqueueSequencingJob(sampleId: string) {
 /**
  * Start the BullMQ worker to process sequencing jobs.
  * Call this from a standalone worker process (worker.ts), NOT from Next.js route handlers.
- *
- * When a job completes, the worker advances the sample to the next stage
- * using the same core logic (`performStageAdvance`) as the manual advance route.
  */
 export function startSequencingWorker() {
   const worker = new Worker(
@@ -35,10 +60,8 @@ export function startSequencingWorker() {
       const { sampleId } = job.data as { sampleId: string };
       console.log(`Processing sequencing job for sample ${sampleId}`);
 
-      // Simulate sequencing work — in production, this would call an actual sequencer API
       await new Promise((resolve) => setTimeout(resolve, 5000));
 
-      // Load the sample to get current stage info
       const sample = await prisma.sample.findUnique({
         where: { id: sampleId },
         include: {
@@ -52,7 +75,6 @@ export function startSequencingWorker() {
 
       const stages = sample.template.stages as unknown as Stage[];
 
-      // Advance the sample using the same core logic as the manual route
       await performStageAdvance(
         sampleId,
         sample.currentStageIndex,
@@ -62,7 +84,7 @@ export function startSequencingWorker() {
 
       console.log(`Sequencing complete — advanced sample ${sampleId} to next stage`);
     },
-    { connection }
+    { connection: redisConnection }
   );
 
   worker.on("completed", (job) => {

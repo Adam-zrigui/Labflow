@@ -2,8 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyIdToken } from "@/lib/firebase-admin";
 import { prisma } from "@/lib/prisma";
 import { createSessionCookie, clearSessionCookie } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/rate-limit";
+import * as Sentry from "@sentry/nextjs";
 
 export async function POST(request: NextRequest) {
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0] ?? "127.0.0.1";
+  const { success } = await checkRateLimit(`login:${ip}`);
+
+  if (!success) {
+    return NextResponse.json(
+      { error: "Too many attempts, please try again in a minute" },
+      { status: 429 }
+    );
+  }
+
   try {
     const { idToken } = await request.json();
 
@@ -11,11 +23,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing ID token" }, { status: 400 });
     }
 
-    // Verify the Firebase ID token server-side
     const decoded = await verifyIdToken(idToken);
     const firebaseUid = decoded.uid;
 
-    // Look up the user in our Postgres database
     const user = await prisma.user.findUnique({
       where: { firebaseUid },
       select: { id: true, tenantId: true, role: true, email: true },
@@ -25,7 +35,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 401 });
     }
 
-    // Create the session cookie via shared helper
     const response = await createSessionCookie({
       firebaseUid,
       userId: user.id,
@@ -37,6 +46,7 @@ export async function POST(request: NextRequest) {
     return response;
   } catch (error) {
     console.error("Session creation error:", error);
+    Sentry.captureException(error);
     return NextResponse.json({ error: "Invalid token" }, { status: 401 });
   }
 }

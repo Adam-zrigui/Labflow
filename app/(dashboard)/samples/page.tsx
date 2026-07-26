@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Spinner } from "@/components/ui/spinner";
 import {
   SkeletonCard,
   SkeletonTable,
@@ -24,6 +25,8 @@ import {
   Activity,
   Search,
   X,
+  Download,
+  ChevronRight,
 } from "lucide-react";
 
 interface Sample {
@@ -32,6 +35,11 @@ interface Sample {
   currentStageIndex: number;
   createdAt: string;
   template: { name: string };
+}
+
+interface BulkResult {
+  succeeded: string[];
+  failed: { id: string; reason: string }[];
 }
 
 const statusMap: Record<
@@ -64,6 +72,11 @@ export default function SamplesPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
+  // Bulk actions
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+
   const fetchSamples = useCallback(async () => {
     try {
       const res = await fetch("/api/samples");
@@ -93,6 +106,61 @@ export default function SamplesPage() {
 
   const hasFilters = search.trim() !== "" || statusFilter !== "all";
 
+  const allVisibleSelected =
+    filtered.length > 0 && filtered.every((s) => selected.has(s.id));
+
+  const toggleAll = () => {
+    if (allVisibleSelected) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(filtered.map((s) => s.id)));
+    }
+  };
+
+  const toggleOne = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleBulkAdvance = async () => {
+    if (selected.size === 0) return;
+    setBulkLoading(true);
+    try {
+      const res = await fetch("/api/samples/bulk-advance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sampleIds: Array.from(selected) }),
+      });
+      const data: BulkResult = await res.json();
+      const parts: string[] = [];
+      if (data.succeeded.length > 0)
+        parts.push(`${data.succeeded.length} advanced`);
+      if (data.failed.length > 0) {
+        const reasons = [...new Set(data.failed.map((f) => f.reason))];
+        parts.push(`${data.failed.length} skipped (${reasons[0] ?? "error"})`);
+      }
+      setToast(parts.join(", "));
+      setSelected(new Set());
+      fetchSamples();
+    } catch {
+      setToast("Bulk advance failed");
+    } finally {
+      setBulkLoading(false);
+      setTimeout(() => setToast(null), 5000);
+    }
+  };
+
+  const handleExport = () => {
+    const params = new URLSearchParams();
+    if (statusFilter !== "all") params.set("status", statusFilter);
+    if (search.trim()) params.set("search", search.trim());
+    window.location.href = `/api/samples/export?${params.toString()}`;
+  };
+
   const inProgress = samples.filter((s) => s.status === "in_progress").length;
   const flagged = samples.filter((s) => s.status === "flagged").length;
   const todayCompleted = samples.filter(
@@ -103,6 +171,14 @@ export default function SamplesPage() {
 
   return (
     <div className="flex flex-col gap-6 p-6 lg:p-8">
+      {/* Toast */}
+      {toast && (
+        <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800 dark:border-green-800/50 dark:bg-green-950/50 dark:text-green-300 flex items-center gap-2">
+          <CheckCircle2 className="size-4 shrink-0" />
+          {toast}
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -111,10 +187,18 @@ export default function SamplesPage() {
             Track specimens through your lab&apos;s workflow
           </p>
         </div>
-        <Button onClick={() => router.push("/samples/new")} className="gap-1.5">
-          <Plus className="size-4" />
-          Register sample
-        </Button>
+        <div className="flex items-center gap-2">
+          {!loading && samples.length > 0 && (
+            <Button variant="outline" size="sm" onClick={handleExport} className="gap-1.5">
+              <Download className="size-3.5" />
+              Export
+            </Button>
+          )}
+          <Button onClick={() => router.push("/samples/new")} className="gap-1.5">
+            <Plus className="size-4" />
+            Register sample
+          </Button>
+        </div>
       </div>
 
       {/* Stat cards */}
@@ -202,6 +286,39 @@ export default function SamplesPage() {
         </div>
       )}
 
+      {/* Bulk action bar */}
+      {selected.size > 0 && (
+        <div className="flex items-center gap-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-2.5">
+          <span className="text-sm font-medium text-foreground">
+            {selected.size} sample{selected.size !== 1 ? "s" : ""} selected
+          </span>
+          <div className="ml-auto flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleExport}
+              className="gap-1.5"
+            >
+              <Download className="size-3.5" />
+              Export selected
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleBulkAdvance}
+              disabled={bulkLoading}
+              className="gap-1.5"
+            >
+              {bulkLoading ? (
+                <Spinner className="size-3" />
+              ) : (
+                <ChevronRight className="size-3.5" />
+              )}
+              {bulkLoading ? "Advancing\u2026" : "Advance selected"}
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Table or empty state */}
       {loading ? (
         <SkeletonTable rows={5} />
@@ -276,6 +393,15 @@ export default function SamplesPage() {
           <table className="min-w-full text-sm">
             <thead>
               <tr className="border-b bg-muted/30">
+                <th className="w-10 px-4 py-3">
+                  <input
+                    type="checkbox"
+                    checked={allVisibleSelected}
+                    onChange={toggleAll}
+                    className="size-4 rounded border-input"
+                    aria-label="Select all samples"
+                  />
+                </th>
                 <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   Sample
                 </th>
@@ -302,6 +428,15 @@ export default function SamplesPage() {
                     key={sample.id}
                     className="group transition-colors hover:bg-muted/30"
                   >
+                    <td className="w-10 px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={selected.has(sample.id)}
+                        onChange={() => toggleOne(sample.id)}
+                        className="size-4 rounded border-input"
+                        aria-label={`Select ${sampleId(sample.id)}`}
+                      />
+                    </td>
                     <td className="px-4 py-3">
                       <Link
                         href={`/samples/${sample.id}`}

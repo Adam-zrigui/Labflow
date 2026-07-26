@@ -3,8 +3,20 @@ import { prisma } from "@/lib/prisma";
 import type { PrismaTransactionClient } from "@/lib/prisma";
 import { verifyIdToken } from "@/lib/firebase-admin";
 import { createSessionCookie } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/rate-limit";
+import * as Sentry from "@sentry/nextjs";
 
 export async function POST(request: NextRequest) {
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0] ?? "127.0.0.1";
+  const { success } = await checkRateLimit(`register:${ip}`);
+
+  if (!success) {
+    return NextResponse.json(
+      { error: "Too many attempts, please try again in a minute" },
+      { status: 429 }
+    );
+  }
+
   try {
     const body = await request.json();
     const { labName } = body;
@@ -19,16 +31,11 @@ export async function POST(request: NextRequest) {
     let firebaseUid: string;
     let email: string;
 
-    // Support two body formats for backward compatibility:
-    // 1) { idToken, labName } — preferred (verifies server-side)
-    // 2) { firebaseUid, email, labName } — legacy compat (trusts client)
     if (body.idToken) {
-      // Format 1: verify the Firebase ID token server-side
       const decoded = await verifyIdToken(body.idToken);
       firebaseUid = decoded.uid;
       email = decoded.email ?? "";
     } else if (body.firebaseUid && body.email) {
-      // Format 2: trust client-provided uid + email (legacy)
       firebaseUid = body.firebaseUid;
       email = body.email;
     } else {
@@ -41,9 +48,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // If the user already exists in the DB (e.g. previous attempt created
-    // the Firebase auth user but failed before writing to the DB, or the
-    // user completed registration on another tab), just log them in.
     const existingUser = await prisma.user.findUnique({
       where: { firebaseUid },
       select: { id: true, tenantId: true, role: true, email: true },
@@ -60,7 +64,6 @@ export async function POST(request: NextRequest) {
       return response;
     }
 
-    // Create Tenant and User in a transaction
     const { user } = await prisma.$transaction(async (tx: PrismaTransactionClient) => {
       const tenant = await tx.tenant.create({
         data: { name: labName },
@@ -78,7 +81,6 @@ export async function POST(request: NextRequest) {
       return { user };
     });
 
-    // Log them in immediately via the shared session helper
     const response = await createSessionCookie({
       firebaseUid,
       userId: user.id,
@@ -90,6 +92,7 @@ export async function POST(request: NextRequest) {
     return response;
   } catch (error) {
     console.error("Registration error:", error);
+    Sentry.captureException(error);
     const message =
       error instanceof Error ? error.message : "Registration failed";
     return NextResponse.json(
