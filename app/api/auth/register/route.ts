@@ -6,19 +6,40 @@ import { createSessionCookie } from "@/lib/auth";
 
 export async function POST(request: NextRequest) {
   try {
-    const { idToken, labName } = await request.json();
+    const body = await request.json();
+    const { labName } = body;
 
-    if (!idToken || !labName) {
+    if (!labName) {
       return NextResponse.json(
-        { error: "Missing required fields: idToken, labName" },
+        { error: "Missing required field: labName" },
         { status: 400 }
       );
     }
 
-    // Verify the Firebase ID token server-side to get trusted uid + email
-    const decoded = await verifyIdToken(idToken);
-    const firebaseUid = decoded.uid;
-    const email = decoded.email ?? "";
+    let firebaseUid: string;
+    let email: string;
+
+    // Support two body formats for backward compatibility:
+    // 1) { idToken, labName } — preferred (verifies server-side)
+    // 2) { firebaseUid, email, labName } — legacy compat (trusts client)
+    if (body.idToken) {
+      // Format 1: verify the Firebase ID token server-side
+      const decoded = await verifyIdToken(body.idToken);
+      firebaseUid = decoded.uid;
+      email = decoded.email ?? "";
+    } else if (body.firebaseUid && body.email) {
+      // Format 2: trust client-provided uid + email (legacy)
+      firebaseUid = body.firebaseUid;
+      email = body.email;
+    } else {
+      return NextResponse.json(
+        {
+          error:
+            "Provide either { idToken, labName } or { firebaseUid, email, labName }",
+        },
+        { status: 400 }
+      );
+    }
 
     // Create Tenant and User in a transaction
     const { user } = await prisma.$transaction(async (tx: PrismaTransactionClient) => {
