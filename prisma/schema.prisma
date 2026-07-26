@@ -1,7 +1,11 @@
 // schema.prisma
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma-client"
+}
+
 datasource db {
   provider = "postgresql"
-
 }
 model Tenant {
   id                 String    @id @default(uuid())
@@ -19,10 +23,11 @@ model Tenant {
 }
 
 model User {
-  id       String @id @default(uuid())
-  tenantId String
-  email    String @unique
-  role     String // "Admin" | "Technician" | "SeniorScientist"
+  id          String @id @default(uuid())
+  tenantId    String
+  email       String @unique
+  firebaseUid String @unique
+  role        String // "Admin" | "Technician" | "SeniorScientist"
 
   tenant Tenant @relation(fields: [tenantId], references: [id])
 }
