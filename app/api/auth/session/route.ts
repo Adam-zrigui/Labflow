@@ -26,14 +26,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Create the session cookie via shared helper
-    await createSessionCookie({
+    const response = await createSessionCookie({
       firebaseUid,
       userId: user.id,
       tenantId: user.tenantId,
       role: user.role,
     });
 
-    return NextResponse.json({ success: true });
+    return response;
   } catch (error) {
     console.error("Session creation error:", error);
     return NextResponse.json({ error: "Invalid token" }, { status: 401 });
@@ -41,6 +41,5 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE() {
-  await clearSessionCookie();
-  return NextResponse.json({ success: true });
+  return clearSessionCookie();
 }

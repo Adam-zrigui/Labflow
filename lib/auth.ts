@@ -1,24 +1,9 @@
 import { cookies } from "next/headers";
-import { SignJWT, jwtVerify } from "jose";
 import { redirect } from "next/navigation";
+import { NextResponse } from "next/server";
+import { buildSessionToken, verifySessionToken, type SessionPayload } from "./session";
 
-export interface Session {
-  userId: string;
-  tenantId: string;
-  role: string;
-  firebaseUid: string;
-}
-
-export interface SessionPayload {
-  firebaseUid: string;
-  userId: string;
-  tenantId: string;
-  role: string;
-}
-
-const secret = new TextEncoder().encode(
-  process.env.SESSION_SECRET ?? "fallback-dev-secret-do-not-use-in-production"
-);
+export interface Session extends SessionPayload {}
 
 const COOKIE_OPTIONS = {
   httpOnly: true,
@@ -28,21 +13,25 @@ const COOKIE_OPTIONS = {
   maxAge: 60 * 60 * 24 * 7, // 7 days
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function createSessionCookie(payload: SessionPayload) {
-  const token = await new SignJWT(payload as unknown as import("jose").JWTPayload)
-    .setProtectedHeader({ alg: "HS256" })
-    .setExpirationTime("7d")
-    .setIssuedAt()
-    .sign(secret);
-
-  const cookieStore = await cookies();
-  cookieStore.set("session", token, COOKIE_OPTIONS);
+/**
+ * Attach a session cookie to the given (or a new) NextResponse.
+ * Route handlers should pass their response through so the cookie is
+ * guaranteed on the returned object.
+ */
+export async function createSessionCookie(
+  payload: SessionPayload,
+  response?: NextResponse
+): Promise<NextResponse> {
+  const token = await buildSessionToken(payload);
+  const res = response ?? NextResponse.json({ success: true });
+  res.cookies.set("session", token, COOKIE_OPTIONS);
+  return res;
 }
 
-export async function clearSessionCookie() {
-  const cookieStore = await cookies();
-  cookieStore.set("session", "", { ...COOKIE_OPTIONS, maxAge: 0 });
+export async function clearSessionCookie(): Promise<NextResponse> {
+  const res = NextResponse.json({ success: true });
+  res.cookies.set("session", "", { ...COOKIE_OPTIONS, maxAge: 0 });
+  return res;
 }
 
 export async function getSession(): Promise<Session | null> {
@@ -54,16 +43,7 @@ export async function getSession(): Promise<Session | null> {
       return null;
     }
 
-    const { payload } = await jwtVerify(sessionCookie, secret, {
-      algorithms: ["HS256"],
-    });
-
-    return {
-      userId: payload.userId as string,
-      tenantId: payload.tenantId as string,
-      role: payload.role as string,
-      firebaseUid: payload.firebaseUid as string,
-    };
+    return await verifySessionToken(sessionCookie);
   } catch {
     return null;
   }
@@ -77,4 +57,24 @@ export async function requireAuth(): Promise<Session> {
   }
 
   return session;
+}
+
+/**
+ * For API route handlers — returns a JSON 401 response instead of redirecting.
+ * Routes should check `result.error` first, then use `result.session`.
+ */
+export type ApiAuthResult =
+  | { session: Session; error?: undefined }
+  | { session?: undefined; error: NextResponse<{ error: string }> };
+
+export async function requireApiAuth(): Promise<ApiAuthResult> {
+  const session = await getSession();
+
+  if (!session) {
+    return {
+      error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
+    };
+  }
+
+  return { session };
 }

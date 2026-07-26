@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { verifySessionToken } from "@/lib/session";
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Only guard dashboard routes and non-auth/api routes
@@ -18,6 +19,13 @@ export function middleware(request: NextRequest) {
   const sessionCookie = request.cookies.get("session");
 
   if (!sessionCookie?.value) {
+    const loginUrl = new URL("/login", request.url);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  try {
+    await verifySessionToken(sessionCookie.value);
+  } catch {
     const loginUrl = new URL("/login", request.url);
     return NextResponse.redirect(loginUrl);
   }

@@ -23,14 +23,34 @@ vi.mock("@/lib/auth", async () => {
       role: "Admin",
       firebaseUid: "firebase-uid-1",
     })),
+    requireApiAuth: vi.fn(() => ({
+      session: {
+        userId: "user-1",
+        tenantId: "tenant-1",
+        role: "Admin",
+        firebaseUid: "firebase-uid-1",
+      },
+    })),
     getSession: vi.fn(() => ({
       userId: "user-1",
       tenantId: "tenant-1",
       role: "Admin",
       firebaseUid: "firebase-uid-1",
     })),
-    createSessionCookie: vi.fn(),
-    clearSessionCookie: vi.fn(),
+    createSessionCookie: vi.fn(
+      async () =>
+        new Response(JSON.stringify({ success: true }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        })
+    ),
+    clearSessionCookie: vi.fn(
+      async () =>
+        new Response(JSON.stringify({ success: true }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        })
+    ),
   };
 });
 

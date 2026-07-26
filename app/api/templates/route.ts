@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { requireApiAuth } from "@/lib/auth";
 import { requireRole } from "@/lib/require-role";
 import { canCreateTemplate } from "@/lib/feature-gate";
 
@@ -19,7 +19,9 @@ const createTemplateSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  const session = await requireAuth();
+  const auth = await requireApiAuth();
+  if (auth.error) return auth.error;
+  const session = auth.session;
 
   // Admin-only
   const roleCheck = requireRole(session, ["Admin"]);
@@ -63,7 +65,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET() {
-  const session = await requireAuth();
+  const auth = await requireApiAuth();
+  if (auth.error) return auth.error;
+  const session = auth.session;
 
   const templates = await prisma.workflowTemplate.findMany({
     where: { tenantId: session.tenantId },

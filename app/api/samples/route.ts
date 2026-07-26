@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import type { PrismaTransactionClient } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { requireApiAuth } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
 import { canRegisterSample } from "@/lib/feature-gate";
 
@@ -12,7 +12,9 @@ const createSampleSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  const session = await requireAuth();
+  const auth = await requireApiAuth();
+  if (auth.error) return auth.error;
+  const session = auth.session;
 
   // Feature gate: check plan limits
   const gate = await canRegisterSample(session.tenantId);
@@ -114,7 +116,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  const session = await requireAuth();
+  const auth = await requireApiAuth();
+  if (auth.error) return auth.error;
+  const session = auth.session;
 
   const { searchParams } = new URL(request.url);
   const status = searchParams.get("status");

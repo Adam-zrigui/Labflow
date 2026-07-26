@@ -38,6 +38,14 @@ vi.mock("@/lib/auth", () => ({
     role: "Admin",
     firebaseUid: "firebase-uid-1",
   })),
+  requireApiAuth: vi.fn(() => ({
+    session: {
+      userId: "user-1",
+      tenantId: "tenant-1",
+      role: "Admin",
+      firebaseUid: "firebase-uid-1",
+    },
+  })),
   getSession: vi.fn(() => ({
     userId: "user-1",
     tenantId: "tenant-1",
@@ -51,9 +59,11 @@ vi.mock("@/lib/auth", () => ({
 import { prisma } from "@/lib/prisma";
 import { POST as checkoutRaw } from "@/app/api/checkout/route";
 import { POST as portalRaw } from "@/app/api/billing/portal/route";
+import { GET as billingGetRaw } from "@/app/api/billing/route";
 
 const checkout = checkoutRaw as unknown as (req: Request) => Promise<Response>;
 const portal = portalRaw as unknown as (req: Request) => Promise<Response>;
+const billingGet = billingGetRaw as unknown as (req: Request) => Promise<Response>;
 
 const mockPlan = {
   id: "plan-1",
@@ -121,5 +131,77 @@ describe("POST /api/billing/portal — smoke", () => {
     expect(status).toBe(200);
     expect(body).toHaveProperty("url");
     expect(body.url).toContain("portal.stripe.com");
+  });
+});
+
+describe("GET /api/billing — smoke", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("returns 404 when tenant is not found", async () => {
+    vi.mocked(prisma.tenant.findUnique).mockResolvedValueOnce(null);
+    const req = buildRequest({ method: "GET" });
+    const { status } = await parseResponse(await billingGet(req));
+    expect(status).toBe(404);
+  });
+
+  it("returns billing data with plan and usage", async () => {
+    const periodStart = new Date();
+    periodStart.setDate(1);
+    periodStart.setHours(0, 0, 0, 0);
+
+    vi.mocked(prisma.tenant.findUnique).mockResolvedValueOnce({
+      id: "tenant-1",
+      name: "Test Lab",
+      stripeCustomerId: "cus_mock123",
+      planId: "plan-1",
+      subscriptionStatus: "active",
+      createdAt: new Date(),
+      plan: {
+        id: "plan-1",
+        name: "Pro",
+        stripePriceId: "price_123",
+        maxSamplesPerMonth: 1000,
+        maxWorkflowTemplates: 20,
+        maxUsers: 10,
+        hasInstrumentWebhook: true,
+      },
+      usage: [
+        {
+          id: "usage-1",
+          tenantId: "tenant-1",
+          periodStart,
+          sampleCount: 42,
+        },
+      ],
+    } as never);
+
+    const req = buildRequest({ method: "GET" });
+    const { status, body } = await parseResponse(await billingGet(req));
+    expect(status).toBe(200);
+    expect(body.planName).toBe("Pro");
+    expect(body.subscriptionStatus).toBe("active");
+    expect(body.sampleCount).toBe(42);
+    expect(body.maxSamples).toBe(1000);
+    expect(body.hasInstrumentWebhook).toBe(true);
+  });
+
+  it("returns null planName when no plan assigned", async () => {
+    vi.mocked(prisma.tenant.findUnique).mockResolvedValueOnce({
+      id: "tenant-1",
+      name: "Free Lab",
+      stripeCustomerId: null,
+      planId: null,
+      subscriptionStatus: "trialing",
+      createdAt: new Date(),
+      plan: null,
+      usage: [],
+    } as never);
+
+    const req = buildRequest({ method: "GET" });
+    const { status, body } = await parseResponse(await billingGet(req));
+    expect(status).toBe(200);
+    expect(body.planName).toBeNull();
+    expect(body.sampleCount).toBe(0);
+    expect(body.maxSamples).toBe(0);
   });
 });

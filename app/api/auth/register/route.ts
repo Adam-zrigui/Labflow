@@ -60,18 +60,20 @@ export async function POST(request: NextRequest) {
     });
 
     // Log them in immediately via the shared session helper
-    await createSessionCookie({
+    const response = await createSessionCookie({
       firebaseUid,
       userId: user.id,
       tenantId: user.tenantId,
       role: user.role,
     });
 
-    return NextResponse.json({ success: true });
+    return response;
   } catch (error) {
     console.error("Registration error:", error);
+    const message =
+      error instanceof Error ? error.message : "Registration failed";
     return NextResponse.json(
-      { error: "Registration failed" },
+      { error: message },
       { status: 500 }
     );
   }

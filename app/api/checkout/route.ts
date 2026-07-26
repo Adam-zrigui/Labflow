@@ -1,27 +1,40 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { requireApiAuth } from "@/lib/auth";
+
+const checkoutSchema = z.object({
+  planId: z.string().min(1, "planId is required"),
+});
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? "");
 
 export async function POST(request: NextRequest) {
-  const session = await requireAuth();
+  const auth = await requireApiAuth();
+  if (auth.error) return auth.error;
+  const session = auth.session;
 
-  let body: { planId?: string };
+  let body: unknown;
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  if (!body.planId) {
-    return NextResponse.json({ error: "planId is required" }, { status: 400 });
+  const parsed = checkoutSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Validation failed", details: parsed.error.flatten() },
+      { status: 400 }
+    );
   }
+
+  const { planId } = parsed.data;
 
   // Confirm the plan exists
   const plan = await prisma.plan.findUnique({
-    where: { id: body.planId },
+    where: { id: planId },
   });
 
   if (!plan) {

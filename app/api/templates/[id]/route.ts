@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { requireApiAuth } from "@/lib/auth";
 import { requireRole } from "@/lib/require-role";
 
 const stageSchema = z.object({
@@ -21,7 +21,9 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await requireAuth();
+  const auth = await requireApiAuth();
+  if (auth.error) return auth.error;
+  const session = auth.session;
 
   // Admin-only
   const roleCheck = requireRole(session, ["Admin"]);

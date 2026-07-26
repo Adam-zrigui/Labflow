@@ -15,6 +15,14 @@ vi.mock("@/lib/auth", () => ({
     role: "Admin",
     firebaseUid: "firebase-uid-1",
   })),
+  requireApiAuth: vi.fn(() => ({
+    session: {
+      userId: "user-1",
+      tenantId: "tenant-1",
+      role: "Admin",
+      firebaseUid: "firebase-uid-1",
+    },
+  })),
   getSession: vi.fn(() => ({
     userId: "user-1",
     tenantId: "tenant-1",
