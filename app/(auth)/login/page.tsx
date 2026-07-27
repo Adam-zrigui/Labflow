@@ -47,7 +47,10 @@ export default function LoginPage() {
         body: JSON.stringify({ idToken }),
       });
 
-      if (!response.ok) throw new Error("Session creation failed");
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.error || "Session creation failed");
+      }
 
       router.push("/");
       router.refresh();
@@ -61,6 +64,8 @@ export default function LoginPage() {
         else if (code === "auth/operation-not-allowed") message = "Email/password sign-in is not enabled. Please contact support.";
         else if (code === "auth/too-many-requests") message = "Too many attempts. Please try again later.";
         else if (code === "auth/user-disabled") message = "This account has been disabled.";
+      } else if (err instanceof Error) {
+        message = err.message;
       }
       setError(message);
     } finally {
