@@ -64,6 +64,21 @@ export async function POST(request: NextRequest) {
       return response;
     }
 
+    const existingEmailUser = await prisma.user.findUnique({
+      where: { email },
+      select: { firebaseUid: true },
+    });
+
+    if (existingEmailUser) {
+      return NextResponse.json(
+        {
+          error:
+            "An account with this email already exists, but it is linked to a different Firebase user.",
+        },
+        { status: 409 }
+      );
+    }
+
     const { user } = await prisma.$transaction(async (tx: PrismaTransactionClient) => {
       const tenant = await tx.tenant.create({
         data: { name: labName },
@@ -93,6 +108,18 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Registration error:", error);
     Sentry.captureException(error);
+    if (
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      error.code === "P2002"
+    ) {
+      return NextResponse.json(
+        { error: "An account with this email or Firebase user already exists." },
+        { status: 409 }
+      );
+    }
+
     const message =
       error instanceof Error ? error.message : "Registration failed";
     return NextResponse.json(

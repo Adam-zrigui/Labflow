@@ -23,6 +23,7 @@ interface Template {
   id: string;
   name: string;
   stages: Stage[];
+  updatedAt: string;
 }
 
 const ROLES = ["Technician", "SeniorScientist", "Admin"] as const;
@@ -54,7 +55,7 @@ export default function TemplatesPage() {
   }, [fetchTemplates]);
 
   const startNew = () => {
-    setEditing({ id: "", name: "", stages: [emptyStage()] });
+    setEditing({ id: "", name: "", stages: [emptyStage()], updatedAt: new Date().toISOString() });
     setSaved(false);
   };
 
@@ -133,7 +134,7 @@ export default function TemplatesPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col gap-6 p-6 lg:p-8">
+      <div className="flex flex-col gap-6 p-6 lg:p-8 max-w-[960px] mx-auto">
         <div className="flex items-center justify-between">
           <div className="space-y-2">
             <Skeleton className="h-7 w-32" />
@@ -149,7 +150,7 @@ export default function TemplatesPage() {
   // Editing mode
   if (editing) {
     return (
-      <div className="flex flex-col gap-6 p-6 lg:p-8">
+      <div className="flex flex-col gap-6 p-6 lg:p-8 max-w-[960px] mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -305,9 +306,17 @@ export default function TemplatesPage() {
     );
   }
 
+  function relativeDate(dateStr: string) {
+    return new Date(dateStr).toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  }
+
   // List view
   return (
-    <div className="flex flex-col gap-6 p-6 lg:p-8">
+    <div className="flex flex-col gap-6 p-6 lg:p-8 max-w-[960px] mx-auto">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold tracking-tight font-[family-name:var(--font-space-grotesk)]">Templates</h1>
@@ -386,29 +395,65 @@ export default function TemplatesPage() {
           </div>
         </EmptyState>
       ) : (
-        <div className="divide-y divide-border border-t border-border">
-          {templates.map((t) => (
-            <div
-              key={t.id}
-              className="flex items-center justify-between py-3"
-            >
-              <div className="flex items-center gap-4">
-                <span className="text-sm font-medium text-foreground">{t.name}</span>
-                <span className="text-xs text-muted-foreground font-[family-name:var(--font-ibm-plex-mono)]">
-                  {t.stages.length} stage{t.stages.length !== 1 ? "s" : ""}
-                </span>
+        <>
+          <div className="border border-border bg-card">
+            {templates.map((t, i) => (
+              <div
+                key={t.id}
+                className={`flex items-center justify-between gap-4 px-4 py-3.5 ${i < templates.length - 1 ? "border-b border-border" : ""}`}
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-medium text-foreground truncate">{t.name}</span>
+                  </div>
+                  <div className="mt-1.5 flex items-center gap-1.5 overflow-x-auto">
+                    {t.stages.map((s, si) => (
+                      <div key={si} className="flex items-center gap-1.5">
+                        <span className="shrink-0 border border-primary/15 bg-primary/5 px-2 py-0.5 text-[11px] font-medium text-primary font-mono leading-tight">
+                          {String(si + 1).padStart(2, "0")}
+                          <span className="ml-1">{s.name}</span>
+                        </span>
+                        {si < t.stages.length - 1 && (
+                          <span className="text-muted-foreground/40 text-[10px]">&#8594;</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex shrink-0 items-center gap-4">
+                  <span className="text-xs text-muted-foreground tabular-nums whitespace-nowrap hidden sm:block">
+                    {relativeDate(t.updatedAt)}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => startEdit(t)}
+                    className="gap-1.5 text-xs"
+                  >
+                    Edit
+                  </Button>
+                </div>
               </div>
+            ))}
+          </div>
+
+          {templates.length <= 3 && (
+            <div className="border border-dashed border-border p-6 text-center">
+              <p className="text-sm text-muted-foreground">
+                Most labs use 2&#8211;3 templates for different sample types.
+              </p>
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => startEdit(t)}
-                className="gap-1.5 text-xs"
+                onClick={startNew}
+                className="mt-3 gap-1.5"
               >
-                Edit
+                <Plus className="size-3.5" />
+                New template
               </Button>
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
     </div>
   );

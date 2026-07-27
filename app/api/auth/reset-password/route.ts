@@ -67,7 +67,8 @@ export async function POST(request: NextRequest) {
 
   try {
     // Update password in Firebase
-    await getAdminAuth().updateUser(resetToken.user.firebaseUid, {
+    const adminAuth = await getAdminAuth();
+    await adminAuth.updateUser(resetToken.user.firebaseUid, {
       password,
     });
 

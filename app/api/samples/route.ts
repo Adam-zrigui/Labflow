@@ -96,8 +96,7 @@ export async function POST(request: NextRequest) {
         periodStart,
         sampleCount: 1,
       },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any);
+    } as Parameters<typeof tx.usageCounter.upsert>[0]);
 
     return newSample;
   });
@@ -122,24 +121,45 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const status = searchParams.get("status");
+  const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
+  const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") ?? "20", 10)));
+  const skip = (page - 1) * limit;
 
   const statusFilter =
     status && ["in_progress", "flagged", "completed"].includes(status)
       ? { status }
       : {};
 
-  const samples = await prisma.sample.findMany({
-    where: {
-      tenantId: session.tenantId,
-      ...statusFilter,
-    },
-    orderBy: { createdAt: "desc" },
-    include: {
-      template: {
-        select: { name: true },
+  const [samples, total] = await Promise.all([
+    prisma.sample.findMany({
+      where: {
+        tenantId: session.tenantId,
+        ...statusFilter,
       },
+      orderBy: { createdAt: "desc" },
+      skip,
+      take: limit,
+      include: {
+        template: {
+          select: { name: true },
+        },
+      },
+    }),
+    prisma.sample.count({
+      where: {
+        tenantId: session.tenantId,
+        ...statusFilter,
+      },
+    }),
+  ]);
+
+  return NextResponse.json({
+    data: samples,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
     },
   });
-
-  return NextResponse.json(samples);
 }

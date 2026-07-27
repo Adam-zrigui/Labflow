@@ -6,13 +6,14 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Public pages — no auth required
-  if (pathname === "/" || pathname === "/login" || pathname === "/signup" || pathname === "/terms" || pathname === "/privacy" || pathname === "/impressum") {
+  const publicPages = ["/", "/login", "/signup", "/forgot-password", "/reset-password", "/terms", "/privacy", "/impressum"];
+  if (publicPages.includes(pathname)) {
     return NextResponse.next();
   }
 
   const isApiRoute = pathname.startsWith("/api");
   const isPublicApi =
-    pathname.startsWith("/api/auth") || pathname.startsWith("/api/webhooks");
+    pathname.startsWith("/api/auth") || pathname.startsWith("/api/webhooks") || pathname === "/api/health";
 
   if (isApiRoute && isPublicApi) {
     return NextResponse.next();

@@ -186,7 +186,7 @@ export default function SettingsPage() {
   const rb = profile ? roleBadge[profile.role] ?? { label: profile.role, variant: "default" as const } : null;
 
   return (
-    <div className="flex flex-col gap-6 p-6 lg:p-8">
+    <div className="flex flex-col gap-6 p-6 lg:p-8 max-w-[960px] mx-auto">
       <div>
         <h1 className="text-xl font-semibold tracking-tight font-[family-name:var(--font-space-grotesk)]">Settings</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">

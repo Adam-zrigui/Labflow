@@ -150,7 +150,7 @@ export default function TeamPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col gap-6 p-6 lg:p-8">
+      <div className="flex flex-col gap-6 p-6 lg:p-8 max-w-[960px] mx-auto">
         <div>
           <h1 className="text-xl font-semibold tracking-tight font-[family-name:var(--font-space-grotesk)]">Team</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
@@ -164,7 +164,7 @@ export default function TeamPage() {
 
   if (accessDenied) {
     return (
-      <div className="flex flex-col gap-6 p-6 lg:p-8">
+      <div className="flex flex-col gap-6 p-6 lg:p-8 max-w-[960px] mx-auto">
         <div>
           <h1 className="text-xl font-semibold tracking-tight font-[family-name:var(--font-space-grotesk)]">Team</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
@@ -188,7 +188,7 @@ export default function TeamPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 p-6 lg:p-8">
+    <div className="flex flex-col gap-6 p-6 lg:p-8 max-w-[960px] mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

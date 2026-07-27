@@ -51,7 +51,7 @@ function formatLimit(n: number): string {
 
 function BillingSkeleton() {
   return (
-    <div className="flex flex-col gap-6 p-6 lg:p-8">
+    <div className="flex flex-col gap-6 p-6 lg:p-8 max-w-[960px] mx-auto">
       <div className="space-y-2">
         <Skeleton className="h-7 w-24" />
         <Skeleton className="h-4 w-48" />
@@ -157,7 +157,7 @@ export default function BillingPage() {
   const hasSubscription = data?.planId || data?.subscriptionStatus === "active";
   if (!data || !hasSubscription) {
     return (
-      <div className="flex flex-col gap-6 p-6 lg:p-8">
+      <div className="flex flex-col gap-6 p-6 lg:p-8 max-w-[960px] mx-auto">
         <div>
           <h1 className="text-xl font-semibold tracking-tight font-[family-name:var(--font-space-grotesk)]">Billing</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
@@ -320,7 +320,7 @@ export default function BillingPage() {
   const badge = statusBadge(data.subscriptionStatus);
 
   return (
-    <div className="flex flex-col gap-6 p-6 lg:p-8">
+    <div className="flex flex-col gap-6 p-6 lg:p-8 max-w-[960px] mx-auto">
       <div>
         <h1 className="text-xl font-semibold tracking-tight font-[family-name:var(--font-space-grotesk)]">Billing</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">

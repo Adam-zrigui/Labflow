@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { FlaskConical, TestTubeDiagonal, FileStack, CreditCard, Settings, Users, Menu, X, ExternalLink } from "lucide-react";
+import { FlaskConical, TestTubeDiagonal, FileStack, CreditCard, Settings, Users, Menu, X } from "lucide-react";
 
 const navItems = [
   { label: "Samples", href: "/samples", icon: TestTubeDiagonal },
@@ -60,16 +60,7 @@ export function AppSidebarLayout({ children, userMenu }: AppSidebarLayoutProps) 
 
         {/* Footer — pushed to bottom */}
         <div className="mt-auto border-t border-sidebar-border p-3 space-y-1">
-          <div className="flex items-center gap-1">
-            <a
-              href="https://docs.labflow.dev"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex flex-1 items-center gap-2.5 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-sidebar-foreground"
-            >
-              <ExternalLink className="size-3.5" />
-              Help & docs
-            </a>
+          <div className="flex items-center justify-end">
             <ThemeToggle />
           </div>
           <div className="px-3 pt-1">

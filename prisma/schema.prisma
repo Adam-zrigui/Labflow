@@ -22,16 +22,21 @@ model Tenant {
   samples   Sample[]
   templates WorkflowTemplate[]
   usage     UsageCounter[]
+  invites   InviteToken[]
 }
 
 model User {
-  id          String @id @default(uuid())
-  tenantId    String
-  email       String @unique
-  firebaseUid String @unique
-  role        String // "Admin" | "Technician" | "SeniorScientist"
+  id              String    @id @default(uuid())
+  tenantId        String
+  email           String    @unique
+  firebaseUid     String    @unique
+  role            String // "Admin" | "Technician" | "SeniorScientist"
+  notifyOnFlag    Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  deletedAt       DateTime?
 
-  tenant Tenant @relation(fields: [tenantId], references: [id])
+  tenant              Tenant               @relation(fields: [tenantId], references: [id])
+  passwordResetTokens PasswordResetToken[]
 }
 
 model Plan {
@@ -47,10 +52,12 @@ model Plan {
 }
 
 model WorkflowTemplate {
-  id       String @id @default(uuid())
-  tenantId String
-  name     String
-  stages   Json   // [{ name, requiredRole, requiredFields, isApprovalGate }]
+  id        String   @id @default(uuid())
+  tenantId  String
+  name      String
+  stages    Json   // [{ name, requiredRole, requiredFields, isApprovalGate }]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 
   tenant  Tenant   @relation(fields: [tenantId], references: [id])
   samples Sample[]
@@ -82,6 +89,20 @@ model SampleStageHistory {
   sample Sample @relation(fields: [sampleId], references: [id])
 }
 
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+}
+
 // Append-only. Never updated or deleted from application code.
 model AuditLog {
   id         String   @id @default(uuid())
@@ -103,4 +124,19 @@ model UsageCounter {
   tenant Tenant @relation(fields: [tenantId], references: [id])
 
   @@unique([tenantId, periodStart])
+}
+
+model InviteToken {
+  id        String   @id @default(uuid())
+  tenantId  String
+  email     String
+  role      String // "Technician" | "SeniorScientist"
+  token     String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([token])
 }

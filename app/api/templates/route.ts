@@ -71,7 +71,8 @@ export async function GET() {
 
   const templates = await prisma.workflowTemplate.findMany({
     where: { tenantId: session.tenantId },
-    orderBy: { name: "asc" },
+    orderBy: { updatedAt: "desc" },
+    select: { id: true, name: true, stages: true, updatedAt: true },
   });
 
   return NextResponse.json(templates);

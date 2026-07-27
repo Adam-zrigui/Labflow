@@ -161,4 +161,22 @@ describe("POST /api/auth/register — smoke", () => {
     const { status } = await parseResponse(await registerPost(req));
     expect(status).toBe(400);
   });
+
+  it("returns 409 when email exists for a different Firebase user", async () => {
+    vi.mocked(verifyIdToken).mockResolvedValueOnce({
+      uid: "new-firebase-uid",
+      email: "user@lab.com",
+    } as never);
+    vi.mocked(prisma.user.findUnique)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ firebaseUid: "old-firebase-uid" } as never);
+
+    const req = buildRequest({
+      body: { idToken: "valid-token", labName: "Lab" },
+    });
+    const { status, body } = await parseResponse(await registerPost(req));
+
+    expect(status).toBe(409);
+    expect(body.error).toContain("different Firebase user");
+  });
 });
