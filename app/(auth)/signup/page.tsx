@@ -72,9 +72,18 @@ export default function SignupPage() {
 
       router.push("/");
       router.refresh();
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Registration failed. Please try again.";
+    } catch (err: unknown) {
+      let message = "Registration failed. Please try again.";
+      if (err && typeof err === "object" && "code" in err) {
+        const code = (err as { code: string }).code;
+        if (code === "auth/email-already-in-use") message = "An account with this email already exists.";
+        else if (code === "auth/weak-password") message = "Password is too weak.";
+        else if (code === "auth/invalid-email") message = "Invalid email address.";
+        else if (code === "auth/operation-not-allowed") message = "Email/password sign-up is not enabled. Please contact support.";
+        else if (code === "auth/too-many-requests") message = "Too many attempts. Please try again later.";
+      } else if (err instanceof Error) {
+        message = err.message;
+      }
       setError(message);
     } finally {
       setLoading(false);

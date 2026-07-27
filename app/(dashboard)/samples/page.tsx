@@ -77,7 +77,10 @@ export default function SamplesPage() {
   const fetchSamples = useCallback(async () => {
     try {
       const res = await fetch("/api/samples");
-      if (res.ok) setSamples(await res.json());
+      if (res.ok) {
+        const json = await res.json();
+        setSamples(Array.isArray(json) ? json : json.data ?? []);
+      }
     } catch {
       // silently fail — show empty state
     } finally {
@@ -167,7 +170,7 @@ export default function SamplesPage() {
   ).length;
 
   return (
-    <div className="flex flex-col gap-6 p-6 lg:p-8">
+    <div className="flex flex-col gap-6 p-6 lg:p-8 max-w-[960px] mx-auto">
       {/* Toast */}
       {toast && (
         <div className="border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-800 dark:border-green-700 dark:bg-green-950/50 dark:text-green-300 flex items-center gap-2">

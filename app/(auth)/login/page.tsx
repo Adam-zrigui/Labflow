@@ -51,8 +51,18 @@ export default function LoginPage() {
 
       router.push("/");
       router.refresh();
-    } catch {
-      setError("Invalid email or password");
+    } catch (err: unknown) {
+      let message = "Invalid email or password";
+      if (err && typeof err === "object" && "code" in err) {
+        const code = (err as { code: string }).code;
+        if (code === "auth/user-not-found") message = "No account found with this email.";
+        else if (code === "auth/wrong-password") message = "Incorrect password.";
+        else if (code === "auth/invalid-email") message = "Invalid email address.";
+        else if (code === "auth/operation-not-allowed") message = "Email/password sign-in is not enabled. Please contact support.";
+        else if (code === "auth/too-many-requests") message = "Too many attempts. Please try again later.";
+        else if (code === "auth/user-disabled") message = "This account has been disabled.";
+      }
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -118,6 +128,15 @@ export default function LoginPage() {
                   {errors.password.message}
                 </p>
               )}
+            </div>
+
+            <div className="text-right">
+              <Link
+                href="/forgot-password"
+                className="text-sm text-primary hover:text-primary/80 transition-colors"
+              >
+                Forgot password?
+              </Link>
             </div>
 
             {error && (
