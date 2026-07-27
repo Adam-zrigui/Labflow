@@ -7,6 +7,8 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+
 model Tenant {
   id                 String    @id @default(uuid())
   name               String
@@ -20,18 +22,14 @@ model Tenant {
   samples   Sample[]
   templates WorkflowTemplate[]
   usage     UsageCounter[]
-  invites   InviteToken[]
 }
 
 model User {
-  id              String    @id @default(uuid())
-  tenantId        String
-  email           String    @unique
-  firebaseUid     String    @unique
-  role            String    // "Admin" | "Technician" | "SeniorScientist"
-  notifyOnFlag    Boolean   @default(false)
-  createdAt       DateTime  @default(now())
-  deletedAt       DateTime?
+  id          String @id @default(uuid())
+  tenantId    String
+  email       String @unique
+  firebaseUid String @unique
+  role        String // "Admin" | "Technician" | "SeniorScientist"
 
   tenant Tenant @relation(fields: [tenantId], references: [id])
 }
@@ -82,21 +80,6 @@ model SampleStageHistory {
   outcome    String?   // "pass" | "flagged" | null while in progress
 
   sample Sample @relation(fields: [sampleId], references: [id])
-}
-
-model InviteToken {
-  id        String   @id @default(uuid())
-  tenantId  String
-  email     String
-  role      String   // "Technician" | "SeniorScientist"
-  token     String   @unique
-  expiresAt DateTime
-  usedAt    DateTime?
-  createdAt DateTime @default(now())
-
-  tenant Tenant @relation(fields: [tenantId], references: [id])
-
-  @@index([token])
 }
 
 // Append-only. Never updated or deleted from application code.
