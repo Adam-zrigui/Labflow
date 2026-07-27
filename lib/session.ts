@@ -10,8 +10,12 @@ export interface SessionPayload {
 
 export const SESSION_COOKIE_NAME = "session";
 
+const sessionSecret = process.env.SESSION_SECRET;
+if (!sessionSecret && process.env.NODE_ENV === "production") {
+  console.error("SESSION_SECRET environment variable is required in production");
+}
 const secret = new TextEncoder().encode(
-  process.env.SESSION_SECRET ?? "fallback-dev-secret-do-not-use-in-production"
+  sessionSecret ?? "fallback-dev-secret-do-not-use-in-production"
 );
 
 export async function buildSessionToken(payload: SessionPayload) {
