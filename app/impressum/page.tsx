@@ -1,29 +1,15 @@
-import Link from "next/link";
-import { FlaskConical } from "lucide-react";
+import { AppSidebarLayout } from "@/components/app-sidebar-layout";
 
 export default function ImpressumPage() {
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b">
-        <div className="mx-auto flex h-14 max-w-3xl items-center gap-2.5 px-6">
-          <Link href="/login" className="flex items-center gap-2.5">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <FlaskConical className="size-4.5" />
-            </div>
-            <span className="text-[15px] font-semibold tracking-tight">
-              LabFlow
-            </span>
-          </Link>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-3xl px-6 py-12">
+    <AppSidebarLayout>
+      <div className="flex flex-1 flex-col p-6 lg:p-8">
         <h1 className="text-2xl font-semibold tracking-tight">Impressum</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Information pursuant to § 5 TMG
         </p>
 
-        <div className="mt-8 space-y-8 text-sm leading-relaxed text-foreground/80">
+        <div className="mt-8 max-w-3xl space-y-8 text-sm leading-relaxed text-foreground/80">
           <section>
             <h2 className="mb-2 text-base font-semibold text-foreground">
               Provider
@@ -142,7 +128,7 @@ export default function ImpressumPage() {
             </p>
           </section>
         </div>
-      </main>
-    </div>
+      </div>
+    </AppSidebarLayout>
   );
 }

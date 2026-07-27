@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
+    "test:integration": "vitest run --config vitest.config.integration.ts",
     "db:seed": "npx prisma db seed",
     "docker:build": "docker compose build",
     "docker:up": "docker compose up -d",
